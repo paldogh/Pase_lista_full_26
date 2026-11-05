@@ -1,89 +1,68 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Routes, Route, Navigate } from "react-router-dom";
+import Login from "./Components/login";
+import Dashboard from "./Components/Dashboard";
+import Alumnos from "./Components/Alumnos";
+import Sidebar from "./Components/Sidebar";
+import Materias from "./Components/Materias";
+import Reportes from "./Components/Reportes";
+import PaseLista from "./Components/PaseLista";
+import Register from "./Components/Register";
+import ForgotPassword from "./Components/ForgotPassword";
+import ResetPassword from "./Components/ResetPassword";
+import Asistencia from "./Components/Asistencia";
+import Profesores from "./Components/Profesores";
+import Grupos from "./Components/Grupos"; 
 
-function Login() {
 
-  const navigate = useNavigate()
+const RutaPrivada = ({ children }) => {
+  const token = localStorage.getItem("token");
 
-  const [form, setForm] = useState({
-    email: "",
-    password: ""
-  })
-
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    })
+  //* Si NO hay token guardado, redirigimos inmediatamente al Login ("/")
+  if (!token) {
+    return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  //* Si SÍ hay token, renderizamos el contenido
+  return children;
+};
 
-    console.log(form)
-
-    // Aquí irá conexión al backend
-    // axios.post(...)
-
-    navigate("/dashboard")
-  }
-
+function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <Routes>
+      {/* --- RUTAS PÚBLICAS --- */}
+      <Route path="/" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+      {/* --- RUTAS DE RESETEO DE CONTRASEÑA --- */}
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">
-          Pase de Lista QR
-        </h1>
-
-        <form onSubmit={handleSubmit}>
-
-          <div className="mb-4">
-            <label className="block mb-2 text-gray-700">
-              Correo
-            </label>
-
-            <input
-              type="email"
-              name="email"
-              placeholder="correo@ejemplo.com"
-              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block mb-2 text-gray-700">
-              Contraseña
-            </label>
-
-            <input
-              type="password"
-              name="password"
-              placeholder="********"
-              className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition"
-          >
-            Iniciar Sesión
-          </button>
-
-        </form>
-
-      </div>
-
-    </div>
-  )
+      {/* --- RUTAS PRIVADAS --- */}
+      <Route
+        path="/*"
+        element={
+          <RutaPrivada>
+            <div className="flex h-screen w-full bg-slate-100 overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto p-8">
+                <Routes>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/alumnos" element={<Alumnos />} />
+                  <Route path="/profesores" element={<Profesores />} />
+                     <Route path="/grupos" element={<Grupos />} />
+                  <Route path="/materias" element={<Materias />} />
+                  <Route path="/pases-lista" element={<PaseLista />} />
+                  <Route path="/asistencia" element={<Asistencia />} />
+                  <Route path="/reportes" element={<Reportes />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </main>
+            </div>
+          </RutaPrivada>
+        }
+      />
+    </Routes>
+  );
 }
 
-export default Login
+export default App;
