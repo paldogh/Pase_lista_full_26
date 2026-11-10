@@ -23,12 +23,35 @@
 hs_err_pid*
 replay_pid*
 
+# Dependencias
 node_modules/
 **/node_modules/
+
+# Variables de entorno
 .env
 .env.*
 **/.env
 **/.env.*
+!.env.example
+!**/.env.example
+
+# Archivos compilados
 dist/
 build/
+coverage/
+
+# Expo
 .expo/
+web-build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Respaldos
+*.dump
+*.sqlite
+*.db
+
+# Configuracion local
+.vscode/
