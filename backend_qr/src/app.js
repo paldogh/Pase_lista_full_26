@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -15,17 +16,22 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 
 const app = express();
 
-// Orígenes permitidos: configurar FRONTEND_URL y/o ALLOWED_ORIGINS en Render.
-// ALLOWED_ORIGINS admite varios dominios separados por coma.
-const normalizarOrigen = (valor) => String(valor || "").trim().replace(/\/$/, "");
+// ======================================================
+// CONFIGURACIÓN CORS
+// ======================================================
+
+// Dominio de producción del frontend
+const frontendProduccion = "https://pase-lista-front.onrender.com";
+
+// Orígenes adicionales configurados en variables de entorno
 const origenesConfigurados = [
   process.env.FRONTEND_URL,
-  ...(process.env.ALLOWED_ORIGINS || "").split(","),
+  ...(process.env.ALLOWED_ORIGINS || "").split(",")
 ]
-  .map(normalizarOrigen)
+  .map((origen) => String(origen || "").trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
-// Mantener disponibles los orígenes locales utilizados durante el desarrollo.
+// Orígenes locales para desarrollo
 const origenesLocales = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -36,80 +42,172 @@ const origenesLocales = [
   "http://localhost:8081",
   "https://0hffwew-anonymous-8081.exp.direct",
   "http://192.168.137.76:3000",
-  "http://192.168.137.76:5173",
+  "http://192.168.137.76:5173"
 ];
 
-const origenesPermitidos = new Set([...origenesLocales, ...origenesConfigurados]);
-
-app.disable("x-powered-by");
-app.set("trust proxy", 1); // Render se ejecuta detrás de un proxy.
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+const origenesPermitidos = new Set([
+  frontendProduccion,
+  ...origenesLocales,
+  ...origenesConfigurados
+]);
 
 app.use(
   cors({
-    origin(origin, callback) {
-      // Aplicaciones nativas (Expo/Android) normalmente no envían Origin.
-      if (!origin) return callback(null, true);
+    origin: function (origin, callback) {
+      // Permitir aplicaciones móviles o solicitudes sin Origin
+      if (!origin) {
+        return callback(null, true);
+      }
 
-      const origen = normalizarOrigen(origin);
-      if (origenesPermitidos.has(origen)) return callback(null, true);
+      const origen = origin.trim().replace(/\/+$/, "");
 
-      console.warn(`[CORS] Origen rechazado: ${origen}`);
-      return callback(null, false);
+      if (origenesPermitidos.has(origen)) {
+        return callback(null, true);
+      }
+
+      console.warn("[CORS] Origen rechazado:", origen);
+
+      return callback(new Error("Origen no permitido por CORS"));
     },
+
     credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    maxAge: 86400,
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS"
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With"
+    ],
+
+    maxAge: 86400
   })
 );
 
-// Importación masiva: se conserva el límite de 10 MB que ya utilizaba el proyecto.
+// ======================================================
+// SEGURIDAD Y CONFIGURACIÓN EXPRESS
+// ======================================================
+
+app.disable("x-powered-by");
+
+app.set("trust proxy", 1);
+
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin"
+    }
+  })
+);
+
+// Límite de solicitudes JSON y formularios
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "10mb"
+  })
+);
+
+// ======================================================
+// RUTAS GENERALES
+// ======================================================
 
 app.get("/", (_req, res) => {
-  res.status(200).json({ msg: "Backend funcionando", status: "ok" });
-});
-
-// Comprobación básica para Render (no consulta la base de datos).
-app.get("/health", (_req, res) => {
-  res.status(200).json({ status: "ok", service: "pase-lista-backend" });
-});
-
-// Se mantienen los mismos prefijos de rutas del backend original.
-app.use("/api", loginRoutes);
-app.use("/api/alumnos", alumnosRoutes);
-app.use("/api", materiaRoutes);
-app.use("/api/stats", statsRoutes);
-app.use("/api", authenticationRoutes);
-app.use("/api", asistenciaRoutes);
-app.use("/api", maestroRoutes);
-app.use("/api/reportes", reportesRoutes);
-app.use("/api/grupos", gruposRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-
-// 404 consistente en JSON.
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
+  res.status(200).json({
+    msg: "Backend funcionando",
+    status: "ok"
   });
 });
 
-// Manejo final de errores de middleware (incluidos errores de parsing JSON).
+// Comprobación de disponibilidad para Render
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "pase-lista-backend"
+  });
+});
+
+// ======================================================
+// RUTAS API
+// Se conservan los prefijos originales
+// ======================================================
+
+app.use("/api", loginRoutes);
+
+app.use("/api/alumnos", alumnosRoutes);
+
+app.use("/api", materiaRoutes);
+
+app.use("/api/stats", statsRoutes);
+
+app.use("/api", authenticationRoutes);
+
+app.use("/api", asistenciaRoutes);
+
+app.use("/api", maestroRoutes);
+
+app.use("/api/reportes", reportesRoutes);
+
+app.use("/api/grupos", gruposRoutes);
+
+app.use("/api/dashboard", dashboardRoutes);
+
+// ======================================================
+// RUTA NO ENCONTRADA
+// ======================================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`
+  });
+});
+
+// ======================================================
+// MANEJO GLOBAL DE ERRORES
+// ======================================================
+
 app.use((error, _req, res, _next) => {
-  console.error("[HTTP] Error no controlado:", error);
+  console.error("[HTTP] Error:", error);
+
+  if (error?.message === "Origen no permitido por CORS") {
+    return res.status(403).json({
+      success: false,
+      message: "Origen no permitido por CORS"
+    });
+  }
 
   if (error?.type === "entity.too.large") {
-    return res.status(413).json({ success: false, message: "El contenido enviado supera el límite permitido de 10 MB." });
+    return res.status(413).json({
+      success: false,
+      message: "El contenido supera el límite permitido de 10 MB."
+    });
   }
 
-  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
-    return res.status(400).json({ success: false, message: "El JSON enviado no tiene un formato válido." });
+  if (
+    error instanceof SyntaxError &&
+    error.status === 400 &&
+    "body" in error
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "El JSON enviado no tiene un formato válido."
+    });
   }
 
-  return res.status(500).json({ success: false, message: "Error interno del servidor." });
+  return res.status(500).json({
+    success: false,
+    message: "Error interno del servidor."
+  });
 });
 
 export default app;
