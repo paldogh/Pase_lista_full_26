@@ -1,5 +1,2 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
-
-export default prisma;
+// Compatibilidad: reutiliza el cliente singleton del backend.
+export { default } from "../src/config/prisma.js";

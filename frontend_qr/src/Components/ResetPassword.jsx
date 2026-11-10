@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../api";
 
 function ResetPassword() {
     // useParams extrae el token dinámico de la URL
@@ -33,7 +33,7 @@ function ResetPassword() {
 
         try {
             // Petición al backend (Endpoint que crearemos en el siguiente paso)
-            const response = await axios.post(`http://localhost:3000/api/auth/reset-password/${token}`, {
+            const response = await api.post(`/auth/reset-password/${token}`, {
                 nuevaPassword: password
             });
 

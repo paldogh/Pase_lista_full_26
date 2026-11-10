@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "../styles/FiltrosReportes.css";
+import api from "../api";
 
 const FiltrosReportes = ({ tipoReporte, setFiltros, onConsultar, loading }) => {
   const [filtrosLocales, setFiltrosLocales] = useState({
@@ -20,11 +21,8 @@ const FiltrosReportes = ({ tipoReporte, setFiltros, onConsultar, loading }) => {
   useEffect(() => {
     const fetchCarreras = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/carreras');
-        if (res.ok) {
-          const data = await res.json();
-          setCarreras(Array.isArray(data) ? data : []);
-        }
+        const { data } = await api.get('/carreras');
+        setCarreras(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
       } catch (error) {
         console.error("Error al cargar carreras:", error);
         setError("Error al cargar carreras");
@@ -41,11 +39,8 @@ const FiltrosReportes = ({ tipoReporte, setFiltros, onConsultar, loading }) => {
         return;
       }
       try {
-        const res = await fetch(`http://localhost:3000/api/grupos?carreraId=${filtrosLocales.carreraId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setGrupos(Array.isArray(data) ? data : []);
-        }
+        const { data } = await api.get('/grupos', { params: { carreraId: filtrosLocales.carreraId } });
+        setGrupos(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
       } catch (error) {
         console.error("Error al cargar grupos:", error);
       }
@@ -61,11 +56,8 @@ const FiltrosReportes = ({ tipoReporte, setFiltros, onConsultar, loading }) => {
         return;
       }
       try {
-        const res = await fetch(`http://localhost:3000/api/materias?carreraId=${filtrosLocales.carreraId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setMaterias(Array.isArray(data) ? data : []);
-        }
+        const { data } = await api.get('/materias', { params: { carreraId: filtrosLocales.carreraId } });
+        setMaterias(Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []);
       } catch (error) {
         console.error("Error al cargar materias:", error);
       }

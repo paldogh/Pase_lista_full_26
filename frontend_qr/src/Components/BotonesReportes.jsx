@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import "../styles/BotonesReportes.css";
+import api from "../api";
 
 const BotonesReportes = ({ tipoReporte, setTipoReporte }) => {
   const [exportando, setExportando] = useState(false);
@@ -28,25 +29,18 @@ const BotonesReportes = ({ tipoReporte, setTipoReporte }) => {
         }
       }
 
-      const url = `http://localhost:3000/api/${tipoReporte}/${formato}?${params.toString()}`;
-      
-      console.log(`📤 Exportando a ${formato.toUpperCase()}:`, url);
-
-      const response = await fetch(url, {
-        method: 'GET',
+      const ruta = `/${tipoReporte}/${formato}`;
+      console.log(`📤 Exportando a ${formato.toUpperCase()}:`, ruta);
+      const response = await api.get(ruta, {
+        params: Object.fromEntries(params.entries()),
+        responseType: 'blob',
         headers: {
-          'Accept': formato === 'pdf' 
-            ? 'application/pdf' 
+          Accept: formato === 'pdf'
+            ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         },
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText || response.statusText}`);
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
       
       if (blob.size === 0) {
         throw new Error('El archivo generado está vacío');

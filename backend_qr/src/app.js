@@ -1,89 +1,115 @@
-//este archivo lo compartimos entre todos, revisa bien antes de actualizar
-
 import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+
 import loginRoutes from "./routes/login.routes.js";
-import alumnosRoutes from './routes/alumnos.routes.js';
+import alumnosRoutes from "./routes/alumnos.routes.js";
 import materiaRoutes from "./routes/materias.routes.js";
 import statsRoutes from "./routes/stats.routes.js";
 import authenticationRoutes from "./routes/authentication.routes.js";
-// IMPORT PARA LAS ASISTENCIAS
-import asistenciaRoutes from './routes/asistencias.routes.js';
-import cors from "cors";
-// importacion para maestros CRUD Uriel Cruz Barrera
+import asistenciaRoutes from "./routes/asistencias.routes.js";
 import maestroRoutes from "./routes/maestro.routes.js";
 import reportesRoutes from "./routes/reportes.routes.js";
-//import de test-connection
-import testRoutes from "./routes/test.routes.js";
-
 import gruposRoutes from "./routes/grupos.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
 
-import dashboardRoutes from "./routes/dashboard.routes.js"; 
 const app = express();
 
-// Permitir peticiones del Front
+// Orígenes permitidos: configurar FRONTEND_URL y/o ALLOWED_ORIGINS en Render.
+// ALLOWED_ORIGINS admite varios dominios separados por coma.
+const normalizarOrigen = (valor) => String(valor || "").trim().replace(/\/$/, "");
+const origenesConfigurados = [
+  process.env.FRONTEND_URL,
+  ...(process.env.ALLOWED_ORIGINS || "").split(","),
+]
+  .map(normalizarOrigen)
+  .filter(Boolean);
 
-
-const allowedOrigins = [
+// Mantener disponibles los orígenes locales utilizados durante el desarrollo.
+const origenesLocales = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://127.0.0.1:5173",
   "http://127.0.0.1:5174",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "http://192.168.137.76:3000",
-  "http://192.168.137.76:5173",
   "http://localhost:8081",
   "https://0hffwew-anonymous-8081.exp.direct",
+  "http://192.168.137.76:3000",
+  "http://192.168.137.76:5173",
 ];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+const origenesPermitidos = new Set([...origenesLocales, ...origenesConfigurados]);
 
-    console.error("Origen rechazado por CORS:", origin);
-    return callback(null, false);
-  },
-  credentials: true,
-}));
+app.disable("x-powered-by");
+app.set("trust proxy", 1); // Render se ejecuta detrás de un proxy.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Aplicaciones nativas (Expo/Android) normalmente no envían Origin.
+      if (!origin) return callback(null, true);
 
+      const origen = normalizarOrigen(origin);
+      if (origenesPermitidos.has(origen)) return callback(null, true);
 
-// Permitir solicitudes JSON grandes para la importación masiva.
+      console.warn(`[CORS] Origen rechazado: ${origen}`);
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    maxAge: 86400,
+  })
+);
+
+// Importación masiva: se conserva el límite de 10 MB que ya utilizaba el proyecto.
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Permitir formularios con contenido amplio.
-app.use(express.urlencoded({
-    extended: true,
-    limit: "10mb"
-}));
-app.get("/", (req, res) => {
-  res.json({
-    msg: "Backend funcionando"
+app.get("/", (_req, res) => {
+  res.status(200).json({ msg: "Backend funcionando", status: "ok" });
+});
+
+// Comprobación básica para Render (no consulta la base de datos).
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", service: "pase-lista-backend" });
+});
+
+// Se mantienen los mismos prefijos de rutas del backend original.
+app.use("/api", loginRoutes);
+app.use("/api/alumnos", alumnosRoutes);
+app.use("/api", materiaRoutes);
+app.use("/api/stats", statsRoutes);
+app.use("/api", authenticationRoutes);
+app.use("/api", asistenciaRoutes);
+app.use("/api", maestroRoutes);
+app.use("/api/reportes", reportesRoutes);
+app.use("/api/grupos", gruposRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+
+// 404 consistente en JSON.
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
   });
 });
 
-//ruta para el login
-app.use("/api", loginRoutes);
-//ruta para cosultar los alumnos
-app.use('/api/alumnos', alumnosRoutes);
-//ruta para materias
-app.use("/api", materiaRoutes);
-app.use("/api/stats", statsRoutes);
-// Ruta para la autenticacion ADRIÁN
-app.use('/api', authenticationRoutes);
+// Manejo final de errores de middleware (incluidos errores de parsing JSON).
+app.use((error, _req, res, _next) => {
+  console.error("[HTTP] Error no controlado:", error);
 
-//  ruta para asistencias 
-app.use("/api", asistenciaRoutes);
-// Ruta para maestros CRUD Uriel Cruz Barrera
-app.use("/api", maestroRoutes);
-//reta para reportes
-app.use("/api/reportes", reportesRoutes);
-//ruta para la conexión  al servidor
-//app.use("/api", testRoutes);
-app.use("/api/grupos", gruposRoutes);
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({ success: false, message: "El contenido enviado supera el límite permitido de 10 MB." });
+  }
 
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    return res.status(400).json({ success: false, message: "El JSON enviado no tiene un formato válido." });
+  }
 
-app.use("/api/dashboard", dashboardRoutes);
+  return res.status(500).json({ success: false, message: "Error interno del servidor." });
+});
 
 export default app;

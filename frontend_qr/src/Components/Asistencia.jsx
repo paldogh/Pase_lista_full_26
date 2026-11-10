@@ -1,9 +1,8 @@
-import axios from "axios";
+import api from "../api";
 import { useState, useEffect } from "react";
 
 import RegistrarAsistencia from "./RegistrarAsistencia"; 
 
-const API_URL = "http://localhost:3000/api";
 
 const ESTILOS_ESTADO = {
     PRESENTE: { dot: "bg-emerald-500", text: "text-emerald-700 bg-emerald-50" },
@@ -42,7 +41,7 @@ function Asistencia() {
         setMensaje("");
         setAlumnoInfo(null);
         try {
-            const respuesta = await axios.get(`${API_URL}/asistencias`);
+            const respuesta = await api.get(`/asistencias`);
             const datos = respuesta.data.data || [];
             setAsistencias(datos);
             if (datos.length === 0) {
@@ -65,7 +64,7 @@ function Asistencia() {
         setCargando(true);
         setMensaje("");
         try {
-            const respuesta = await axios.get(`${API_URL}/asistencias/alumno/${matricula.trim()}`);
+            const respuesta = await api.get(`/asistencias/alumno/${matricula.trim()}`);
             setAsistencias(respuesta.data.data || []);
             setAlumnoInfo(respuesta.data.alumno || null);
         } catch (error) {
@@ -91,7 +90,7 @@ function Asistencia() {
         setMensaje("");
         alumnoInfo && setAlumnoInfo(null);
         try {
-            const respuesta = await axios.get(`${API_URL}/asistencias/fecha/${fecha}`);
+            const respuesta = await api.get(`/asistencias/fecha/${fecha}`);
             setAsistencias(respuesta.data.data || []);
         } catch (error) {
             console.error("Error por fecha:", error);

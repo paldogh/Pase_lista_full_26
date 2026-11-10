@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api";
 
-const API_URL = "http://localhost:3000/api";
 
 function RegistrarAsistencia({ alVolver, onAsistenciaCreada }) {
     const [matricula, setMatricula] = useState("");
@@ -31,7 +30,7 @@ function RegistrarAsistencia({ alVolver, onAsistenciaCreada }) {
         setMensaje({ texto: "", tipo: "" });
 
         try {
-            const respuesta = await axios.post(`${API_URL}/asistencias`, {
+            const respuesta = await api.post(`/asistencias`, {
                 matricula: matricula.trim(),
                 docente_id: docenteId.trim()
             });
@@ -40,7 +39,7 @@ function RegistrarAsistencia({ alVolver, onAsistenciaCreada }) {
                 let primerNombre = "Alumno";
 
                 try {
-                    const infoAlumno = await axios.get(`${API_URL}/asistencias/alumno/${matricula.trim()}`);
+                    const infoAlumno = await api.get(`/asistencias/alumno/${matricula.trim()}`);
                     if (infoAlumno.data?.alumno?.nombre) {
                         primerNombre = infoAlumno.data.alumno.nombre.split(" ")[0];
                     }

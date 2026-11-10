@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // Importamos Axios para la petición real
+import api from "../api"; // Importamos Axios para la petición real
 import "../screens/Login.css"; 
 
 function ForgotPassword() {
@@ -19,7 +19,7 @@ function ForgotPassword() {
 
         try {
             // Petición POST real a tu nuevo endpoint en el backend
-            const response = await axios.post("http://localhost:3000/api/auth/forgot-password", {
+            const response = await api.post("/auth/forgot-password", {
                 email: email
             });
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../screens/Login.css";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios"; // Importamos axios
+import api from "../api"; // Importamos axios
 
 function Login() {
     const navigation = useNavigate();
@@ -17,7 +17,7 @@ function Login() {
 
         try {
             //* 2. Hacemos la petición POST al endpoint del backend
-            const response = await axios.post("https://pase-lista-full-26.onrender.com/api/auth/login", {
+            const response = await api.post("/auth/login", {
                 email: email,
                 password: password
             });

@@ -14,17 +14,10 @@ function Sidebar() {
         { id: "reportes", label: "Reportes", icon: BarChart3, path: "/reportes" },
     ];
 
-    const handleLogout = async () => {
-        try {
-            await fetch('http://localhost:3000/api/auth/logout', { 
-                method: 'POST' 
-            });
-        } catch (error) {
-            console.error("Error en el servidor al cerrar sesión", error);
-        } finally {
-            localStorage.removeItem('token'); 
-            navigate('/'); 
-        }
+    const handleLogout = () => {
+        // La sesión utiliza JWT en el cliente. El token se elimina localmente.
+        localStorage.removeItem("token");
+        navigate("/", { replace: true });
     };
 
     return (

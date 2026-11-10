@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import api from "../api";
 
 import BotonesReportes from "./BotonesReportes";
 import FiltrosReportes from "./FiltrosReportes";
@@ -11,7 +12,7 @@ import "../styles/Reportes.css";
 // CONFIGURACIÓN DE LA API
 // ==========================================
 
-const API_URL = "http://localhost:3000/api/reportes";
+const API_URL = "/reportes";
 
 const Reportes = () => {
 
@@ -132,27 +133,8 @@ const Reportes = () => {
             // SOLICITUD AL BACKEND
             // ==================================
 
-            const response = await fetch(url);
-
-            // Leer la respuesta una sola vez
-
-            const textoRespuesta = await response.text();
-
-            let resultado;
-
-            try {
-
-                resultado = textoRespuesta
-                    ? JSON.parse(textoRespuesta)
-                    : {};
-
-            } catch {
-
-                throw new Error(
-                    "El servidor devolvió una respuesta no válida"
-                );
-
-            }
+            const response = await api.get(url);
+            const resultado = response.data;
 
             console.log(
                 "RESPUESTA DEL BACKEND:",
@@ -164,13 +146,13 @@ const Reportes = () => {
             // VALIDAR RESPUESTA
             // ==================================
 
-            if (!response.ok || resultado.ok === false) {
+            if (resultado?.ok === false || resultado?.success === false) {
 
                 throw new Error(
                     resultado.mensaje ||
                     resultado.message ||
                     resultado.msg ||
-                    `Error HTTP ${response.status}`
+                    "La consulta no pudo completarse"
                 );
 
             }

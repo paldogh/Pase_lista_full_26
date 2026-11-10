@@ -1,7 +1,7 @@
 import "../screens/Login.css";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // 1. Importamos axios
+import api from "../api"; // 1. Importamos axios
 
 function Register() {
     const navigate = useNavigate();
@@ -31,7 +31,7 @@ function Register() {
 
         try {
             // 4. Hacemos la petición POST al backend
-            const response = await axios.post("http://localhost:3000/api/auth/register", {
+            const response = await api.post("/auth/register", {
                 nombre: nombre,
                 email: correo, // El backend espera 'email', le pasamos nuestro estado 'correo'
                 password: password,

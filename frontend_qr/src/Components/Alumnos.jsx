@@ -1,7 +1,7 @@
 
 
 import { useEffect, useState, useRef } from "react";
-import axios from "axios";
+import api from "../api";
 import { Plus, X, Edit, Trash2, Search, Filter, QrCode, Upload, CheckCircle, AlertTriangle } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -38,7 +38,7 @@ function Alumnos() {
 
     const obtenerAlumnos = async () => {
         try {
-            const respuesta = await axios.get("http://localhost:3000/api/alumnos");
+            const respuesta = await api.get("/alumnos");
             setAlumnos(respuesta.data.data || []);
         } catch (error) {
             console.log("Error al cargar alumnos:", error);
@@ -47,7 +47,7 @@ function Alumnos() {
 
     const obtenerGrupos = async () => {
         try {
-            const respuesta = await axios.get("http://localhost:3000/api/grupos");
+            const respuesta = await api.get("/grupos");
             setGrupos(respuesta.data.data || []);
         } catch (error) {
             console.log("Error al cargar grupos:", error);
@@ -100,10 +100,10 @@ function Alumnos() {
         e.preventDefault();
         try {
             if (modoEdicion) {
-                await axios.put(`http://localhost:3000/api/alumnos/${alumnoActualId}`, formulario);
+                await api.put(`/alumnos/${alumnoActualId}`, formulario);
                 alert("Alumno actualizado correctamente");
             } else {
-                await axios.post("http://localhost:3000/api/alumnos", formulario);
+                await api.post("/alumnos", formulario);
                 alert("Alumno creado correctamente");
             }
 
@@ -118,7 +118,7 @@ function Alumnos() {
     const eliminarAlumno = async (id) => {
         if (!window.confirm("¿Estás seguro de que deseas eliminar este alumno?")) return;
         try {
-            await axios.delete(`http://localhost:3000/api/alumnos/${id}`);
+            await api.delete(`/alumnos/${id}`);
             alert("Alumno eliminado correctamente");
             obtenerAlumnos();
         } catch (error) {
@@ -209,8 +209,8 @@ const confirmarImportacionMasiva = async () => {
     setImportando(true);
 
     try {
-        const respuesta = await axios.post(
-            "http://localhost:3000/api/alumnos/carga-masiva",
+        const respuesta = await api.post(
+            "/alumnos/carga-masiva",
             {
                 alumnos: validos.map((alumno) => ({
                     matricula: alumno.matricula.trim(),

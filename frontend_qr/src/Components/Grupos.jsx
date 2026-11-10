@@ -1,7 +1,7 @@
 
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api";
 import { Plus, X } from "lucide-react";
 
 function Grupos() {
@@ -22,8 +22,8 @@ function Grupos() {
 
 const obtenerGrupos = async () => {
     try {
-        const respuesta = await axios.get(
-            "http://localhost:3000/api/grupos"
+        const respuesta = await api.get(
+            "/grupos"
         );
 
         // Verificar qué está enviando el backend
@@ -82,8 +82,8 @@ const guardarGrupo = async (e) => {
 
         console.log("Enviando grupo:", datosAEnviar);
 
-        const respuesta = await axios.post(
-            "http://localhost:3000/api/grupos",
+        const respuesta = await api.post(
+            "/grupos",
             datosAEnviar
         );
 
