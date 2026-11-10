@@ -17,7 +17,7 @@ function Login() {
 
         try {
             //* 2. Hacemos la petición POST al endpoint del backend
-            const response = await axios.post("http://localhost:3000/api/auth/login", {
+            const response = await axios.post("https://pase-lista-full-26.onrender.com/api/auth/login", {
                 email: email,
                 password: password
             });
