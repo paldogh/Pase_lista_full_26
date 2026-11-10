@@ -1,3 +1,163 @@
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Users, Layers, UserRound, ClipboardCheck, ScanLine, RefreshCw,
+  ArrowRight, GraduationCap, CalendarDays, Activity, Clock3,
+  ShieldCheck
+} from "lucide-react";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from "chart.js";
+import { Bar } from "react-chartjs-2";
+import api from "../api";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+ChartJS.defaults.font.family = "inherit";
+ChartJS.defaults.color = "#64748b";
+
+const ESTADOS = {
+  PRESENTE: { texto: "Presente", clase: "bg-emerald-50 text-emerald-700 ring-emerald-600/20", punto: "bg-emerald-500" },
+  RETARDO: { texto: "Retardo", clase: "bg-amber-50 text-amber-700 ring-amber-600/20", punto: "bg-amber-500" },
+  FALTA: { texto: "Falta", clase: "bg-rose-50 text-rose-700 ring-rose-600/20", punto: "bg-rose-500" },
+  JUSTIFICADA: { texto: "Justificada", clase: "bg-sky-50 text-sky-700 ring-sky-600/20", punto: "bg-sky-500" },
+};
+
+const COLUMNAS = "sm:grid-cols-[125px_minmax(0,1fr)_110px_130px]";
+
+const formatearHora = (iso) =>
+  new Date(iso).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+const formatearFecha = (iso) =>
+  new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+const esHoy = (iso) => new Date(iso).toDateString() === new Date().toDateString();
+const iniciales = (nombre = "") =>
+  nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+
+function TarjetaResumen({ titulo, valor, Icono, tono, detalle }) {
+  return (
+    <article className="group rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${tono}`}>
+          <Icono size={23} strokeWidth={1.9} />
+        </div>
+        <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">CECyTEH</span>
+      </div>
+      <div className="mt-5">
+        <p className="text-3xl font-extrabold tracking-tight text-slate-900">
+          {(Number(valor) || 0).toLocaleString("es-MX")}
+        </p>
+        <p className="mt-1 text-sm font-semibold text-slate-600">{titulo}</p>
+        {detalle && <p className="mt-1 text-xs text-slate-400">{detalle}</p>}
+      </div>
+    </article>
+  );
+}
+
+function Esqueleto() {
+  return (
+    <div className="mx-auto flex max-w-7xl animate-pulse flex-col gap-6 p-5 md:p-8">
+      <div className="h-32 rounded-2xl bg-slate-200" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="h-40 rounded-2xl bg-slate-200" />)}
+      </div>
+      <div className="h-80 rounded-2xl bg-slate-200" />
+    </div>
+  );
+}
+
+function Dashboard() {
+  const navigate = useNavigate();
+  const [resumen, setResumen] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [refrescando, setRefrescando] = useState(false);
+  const [error, setError] = useState(null);
+
+  const cargarResumen = useCallback(async () => {
+    try {
+      const { data } = await api.get("/dashboard/resumen", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!data.success) throw new Error(data.message);
+      setResumen(data.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.message || "No se pudo conectar con el servidor.");
+    } finally {
+      setCargando(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarResumen();
+    const id = setInterval(cargarResumen, 60000);
+    return () => clearInterval(id);
+  }, [cargarResumen]);
+
+  const recargar = async () => {
+    setRefrescando(true);
+    await cargarResumen();
+    setRefrescando(false);
+  };
+
+  if (cargando) return <Esqueleto />;
+
+  if (!resumen) {
+    return (
+      <div className="min-h-screen bg-[#f4f7f5] p-6 md:p-8">
+        <div className="max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-800">No se pudo cargar el panel</h2>
+          <p className="mt-1 text-sm text-slate-500">{error}</p>
+          <button onClick={recargar} disabled={refrescando} className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#176342] px-4 py-2 text-sm font-semibold text-white hover:bg-[#104b32] disabled:opacity-60">
+            <RefreshCw size={16} className={refrescando ? "animate-spin" : ""} /> Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { tarjetas, ultimosRegistros, asistenciaSemanal } = resumen;
+  const totalSemana = asistenciaSemanal.reduce(
+    (acc, d) => acc + d.presente + d.retardo + d.falta + d.justificada, 0
+  );
+  const fechaHoy = new Date().toLocaleDateString("es-MX", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+
+  const datosGrafica = {
+    labels: asistenciaSemanal.map((d) => d.etiqueta),
+    datasets: [
+      { label: "Presente", data: asistenciaSemanal.map((d) => d.presente), backgroundColor: "#258653", borderRadius: 4, maxBarThickness: 38 },
+      { label: "Retardo", data: asistenciaSemanal.map((d) => d.retardo), backgroundColor: "#e9a23b", borderRadius: 4, maxBarThickness: 38 },
+      { label: "Falta", data: asistenciaSemanal.map((d) => d.falta), backgroundColor: "#d95c5c", borderRadius: 4, maxBarThickness: 38 },
+      { label: "Justificada", data: asistenciaSemanal.map((d) => d.justificada), backgroundColor: "#5595c9", borderRadius: 4, maxBarThickness: 38 },
+    ],
+  };
+
+  const opcionesGrafica = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", boxWidth: 8, padding: 18, font: { size: 11 } } },
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 } } },
+      y: { stacked: true, beginAtZero: true, suggestedMax: 5, ticks: { precision: 0, font: { size: 11 } }, grid: { color: "#edf1ee" }, border: { display: false } },
+    },
+  };
+
+  return (
+    <main className="min-h-screen bg-[#f4f7f5] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        {/* Encabezado institucional */}
+        <header className="relative overflow-hidden rounded-2xl bg-[#123f2d] px-6 py-6 text-white shadow-sm sm:px-8">
+          <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 rounded-full border-[35px] border-white/5" />
+          <div className="pointer-events-none absolute -bottom-28 right-44 h-64 w-64 rounded-full border-[28px] border-white/5" />
+          <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                <GraduationCap size={31} strokeWidth={1.7} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-200">CECyTEH · Educación tecnológica</p>
+                <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Panel de control escolar</h1>
                 <p className="mt-1 text-sm text-emerald-100/80">Sistema integral de registro y seguimiento de asistencia</p>
               </div>
             </div>
