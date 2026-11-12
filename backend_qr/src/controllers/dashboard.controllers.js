@@ -13,51 +13,59 @@ export const obtenerResumenDashboard = async (req, res) => {
   try {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-
     const manana = new Date(hoy);
     manana.setDate(manana.getDate() + 1);
-
     const desde = new Date(hoy);
     desde.setDate(desde.getDate() - (DIAS - 1));
 
+    const rangoHoy = { fechaHora: { gte: hoy, lt: manana } };
+    const rangoSemana = { fechaHora: { gte: desde, lt: manana } };
+
     const [
-      alumnosActivos,
-      alumnosConFoto,
-      alumnosSinFoto,
-      grupos,
-      profesores,
-      asistenciasHoy,
-      ultimos,
-      semana,
+      alumnosActivos, alumnosConFoto, alumnosSinFoto, asistenciasHoy,
+      estadosHoy, alumnosConRegistroHoy, ultimos, semana,
     ] = await Promise.all([
       prisma.alumno.count({ where: { activo: true } }),
-      prisma.alumno.count({ where: { activo: true, fotoKey: { not: null } } }),
-      prisma.alumno.count({ where: { activo: true, fotoKey: null } }),
-      prisma.grupo.count(),
-      prisma.maestro.count(),
-      prisma.asistencia.count({ where: { fechaHora: { gte: hoy, lt: manana } } }),
+      prisma.alumno.count({ where: { activo: true, fotoUrl: { not: null } } }),
+      prisma.alumno.count({ where: { activo: true, fotoUrl: null } }),
+      prisma.asistencia.count({ where: rangoHoy }),
+      prisma.asistencia.groupBy({
+        by: ["estado"],
+        where: rangoHoy,
+        _count: { _all: true },
+      }),
       prisma.asistencia.findMany({
-        take: 5,
+        where: rangoHoy,
+        distinct: ["alumnoId"],
+        select: { alumnoId: true },
+      }),
+      prisma.asistencia.findMany({
+        take: 8,
         orderBy: { fechaHora: "desc" },
         select: {
-          id: true,
-          fechaHora: true,
-          estado: true,
+          id: true, fechaHora: true, estado: true,
           alumno: {
             select: {
-              nombre: true,
-              apellidoPaterno: true,
-              apellidoMaterno: true,
+              nombre: true, apellidoPaterno: true, apellidoMaterno: true,
               Grupo: { select: { nombre: true } },
             },
           },
         },
       }),
       prisma.asistencia.findMany({
-        where: { fechaHora: { gte: desde, lt: manana } },
+        where: rangoSemana,
         select: { fechaHora: true, estado: true },
       }),
     ]);
+
+    const conteoEstado = estadosHoy.reduce((acc, fila) => {
+      acc[fila.estado] = fila._count._all;
+      return acc;
+    }, {});
+
+    const porcentajeFotos = alumnosActivos
+      ? Number(((alumnosConFoto / alumnosActivos) * 100).toFixed(1))
+      : 0;
 
     const dias = [];
     for (let i = 0; i < DIAS; i++) {
@@ -66,16 +74,15 @@ export const obtenerResumenDashboard = async (req, res) => {
       dias.push({
         fecha: claveDia(d),
         etiqueta: d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" }),
-        presente: 0,
-        retardo: 0,
-        falta: 0,
-        justificada: 0,
+        presente: 0, retardo: 0, falta: 0, justificada: 0,
       });
     }
+
     const porDia = new Map(dias.map((d) => [d.fecha, d]));
-    for (const a of semana) {
-      const fila = porDia.get(claveDia(a.fechaHora));
-      if (fila) fila[a.estado.toLowerCase()] += 1;
+    for (const asistencia of semana) {
+      const fila = porDia.get(claveDia(asistencia.fechaHora));
+      const estado = asistencia.estado.toLowerCase();
+      if (fila && Object.prototype.hasOwnProperty.call(fila, estado)) fila[estado] += 1;
     }
 
     return res.json({
@@ -83,21 +90,19 @@ export const obtenerResumenDashboard = async (req, res) => {
       data: {
         tarjetas: {
           alumnosActivos,
-          alumnosConFoto,
-          alumnosSinFoto,
-          porcentajeFotos: alumnosActivos > 0
-            ? Number(((alumnosConFoto / alumnosActivos) * 100).toFixed(1))
-            : 0,
-          grupos,
-          profesores,
           asistenciasHoy,
+          presentesHoy: conteoEstado.PRESENTE || 0,
+          retardosHoy: conteoEstado.RETARDO || 0,
+          faltasHoy: conteoEstado.FALTA || 0,
+          justificadasHoy: conteoEstado.JUSTIFICADA || 0,
+          alumnosConRegistroHoy: alumnosConRegistroHoy.length,
+          alumnosSinRegistroHoy: Math.max(0, alumnosActivos - alumnosConRegistroHoy.length),
+          alumnosConFoto, alumnosSinFoto, porcentajeFotos,
         },
         ultimosRegistros: ultimos.map((a) => ({
           id: a.id,
           fechaHora: a.fechaHora,
-          alumno: [a.alumno.nombre, a.alumno.apellidoPaterno, a.alumno.apellidoMaterno]
-            .filter(Boolean)
-            .join(" "),
+          alumno: [a.alumno.nombre, a.alumno.apellidoPaterno, a.alumno.apellidoMaterno].filter(Boolean).join(" "),
           grupo: a.alumno.Grupo?.nombre ?? "—",
           estado: a.estado,
         })),
