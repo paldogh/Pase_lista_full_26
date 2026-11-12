@@ -1,0 +1,85 @@
+/* CECyTE Hidalgo · interfaz editorial minimalista */
+.cecyte-alumnos {
+  --wine: #65132f;
+  --wine-deep: #4b1025;
+  --green: #078566;
+  --orange: #e99432;
+  --ink: #172033;
+  --muted: #788294;
+  --line: #e9edf2;
+  color: var(--ink);
+  min-width: 0;
+  padding-top: clamp(1.1rem, 2.2vw, 2rem) !important;
+}
+.cecyte-page-heading { display:flex; flex-direction:column; gap:.32rem; }
+.cecyte-eyebrow { color:var(--wine); font-size:.63rem; font-weight:800; letter-spacing:.16em; }
+.cecyte-page-heading h1 { margin:0; color:var(--ink); font-size:clamp(1.8rem,2.7vw,2.45rem); font-weight:700; letter-spacing:-.055em; line-height:1.1; }
+.cecyte-page-heading p { color:var(--muted); font-size:.88rem; margin:.12rem 0 0; }
+.cecyte-alumnos > div:first-child { align-items:center; margin-bottom:1.5rem; }
+.cecyte-alumnos > div:first-child button { min-height:43px; border-radius:999px; padding:.7rem 1.15rem; font-size:.8rem; font-weight:650; box-shadow:none; }
+.cecyte-alumnos > div:first-child button:first-of-type { background:var(--green); }
+.cecyte-alumnos > div:first-child button:first-of-type:hover { background:#066e55; transform:translateY(-1px); }
+.cecyte-alumnos > div:first-child button:last-child { background:var(--wine); }
+.cecyte-alumnos > div:first-child button:last-child:hover { background:var(--wine-deep); transform:translateY(-1px); }
+.cecyte-overview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.85rem; margin:0 0 1.35rem; }
+.cecyte-stat { display:flex; flex-direction:column; align-items:flex-start; gap:.28rem; min-height:112px; padding:1rem 1.15rem; border:1px solid var(--line); border-radius:16px; background:linear-gradient(145deg,#fff 0%,#fcfcfd 100%); box-shadow:0 5px 20px rgba(22,32,51,.025); }
+.cecyte-stat-label { color:var(--muted); font-size:.7rem; font-weight:650; letter-spacing:.04em; }
+.cecyte-stat strong { color:var(--ink); font-size:1.65rem; font-weight:720; letter-spacing:-.055em; line-height:1.1; }
+.cecyte-stat small { color:#9aa3b1; font-size:.68rem; }
+.cecyte-toolbar { gap:.8rem; margin-bottom:1rem !important; }
+.cecyte-toolbar > div { min-height:46px; border:1px solid #e3e7ed; border-radius:999px; padding:.7rem 1rem; background:#fff; box-shadow:0 3px 12px rgba(20,30,45,.025); }
+.cecyte-toolbar input,.cecyte-toolbar select { color:#344054; font-size:.82rem; }
+.cecyte-toolbar input::placeholder { color:#a0a8b4; }
+.cecyte-table-shell { border:1px solid var(--line); border-radius:17px; background:#fff; box-shadow:0 10px 35px rgba(22,32,51,.045); }
+.cecyte-alumnos table { width:100%; min-width:1120px; border-collapse:separate; border-spacing:0; }
+.cecyte-alumnos thead { background:#fafbfc; }
+.cecyte-alumnos thead th { padding:1rem .85rem; border-bottom:1px solid var(--line); color:#929baa; font-size:.62rem; font-weight:800; letter-spacing:.11em; text-transform:uppercase; white-space:nowrap; }
+.cecyte-alumnos tbody tr { background:#fff; transition:background .16s ease; }
+.cecyte-alumnos tbody tr:hover { background:#fcf9fa; }
+.cecyte-alumnos tbody td { padding:.78rem .85rem; border-bottom:1px solid #f0f2f5; color:#465164; font-size:.77rem; vertical-align:middle; }
+.cecyte-alumnos tbody tr:last-child td { border-bottom:0; }
+.cecyte-alumnos tbody td:first-child button { width:44px; height:44px; border:1px solid #e8e1e5; background:#f8f5f6; color:var(--wine); box-shadow:none; }
+.cecyte-alumnos tbody td:first-child button:hover { box-shadow:0 0 0 4px rgba(101,19,47,.07); border-color:#d9c1ca; }
+.cecyte-alumnos tbody td:nth-child(2) { color:var(--wine); font-weight:700; font-variant-numeric:tabular-nums; }
+.cecyte-alumnos tbody td:nth-child(8) { min-width:175px; }
+.cecyte-alumnos tbody td:nth-child(8) p:first-child { color:#263246; font-weight:650; }
+.cecyte-alumnos tbody td:nth-child(8) p:not(:first-child) { color:#8a94a3; }
+.cecyte-alumnos tbody td:nth-child(8) span { border-radius:999px; background:#fff7e9; color:#a96814; font-size:.65rem; padding:.3rem .6rem; }
+.cecyte-alumnos tbody td:nth-child(9) button:first-child { border-radius:999px; background:#f3f0f7; color:#684d86; }
+.cecyte-alumnos tbody td:nth-child(9) label { border-radius:999px; border:1px solid #dcefe8; background:#f0f8f4; color:#087858; }
+.cecyte-alumnos tbody td:last-child button { border-radius:9px; padding:.48rem; }
+.cecyte-alumnos tbody td:last-child button:first-child { background:#fff6e9; color:#ad6c19; }
+.cecyte-alumnos tbody td:last-child button:last-child { background:#fff1f1; color:#c04b4b; }
+.cecyte-alumnos button,.cecyte-alumnos input,.cecyte-alumnos select { font:inherit; }
+.cecyte-alumnos button,.cecyte-alumnos input,.cecyte-alumnos select { transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease; }
+.cecyte-alumnos button:focus-visible,.cecyte-alumnos input:focus-visible,.cecyte-alumnos select:focus-visible { outline:3px solid rgba(233,148,50,.28); outline-offset:2px; }
+.cecyte-alumnos .fixed.inset-0 > div { border:1px solid rgba(255,255,255,.6); border-radius:20px; box-shadow:0 24px 80px rgba(15,23,42,.24); }
+.cecyte-alumnos .fixed.inset-0 h2 { color:var(--ink); letter-spacing:-.03em; }
+.cecyte-alumnos .fixed.inset-0 label.block { color:#697487; font-size:.67rem; letter-spacing:.05em; }
+.cecyte-alumnos .fixed.inset-0 input:not([type=file]),.cecyte-alumnos .fixed.inset-0 select { min-height:42px; border:1px solid #e0e5eb; border-radius:10px; padding:.65rem .8rem; }
+.cecyte-alumnos .fixed.inset-0 input:focus,.cecyte-alumnos .fixed.inset-0 select:focus { border-color:var(--wine); box-shadow:0 0 0 3px rgba(101,19,47,.08); }
+.cecyte-alumnos .fixed.inset-0 form button[type=submit] { background:var(--wine); border-radius:999px; box-shadow:none; }
+.cecyte-alumnos .fixed.inset-0 form button[type=submit]:hover { background:var(--wine-deep); }
+.cecyte-alumnos .fixed.inset-0 section { border-color:#eadde2; background:#fbf7f8; border-radius:14px; }
+.cecyte-alumnos .fixed.inset-0 section h3,.cecyte-alumnos .fixed.inset-0 section svg { color:var(--wine); }
+@media(max-width:760px) {
+ .cecyte-alumnos { padding:.9rem .7rem !important; }
+ .cecyte-alumnos > div:first-child { align-items:stretch; }
+ .cecyte-alumnos > div:first-child > div { display:grid; grid-template-columns:1fr 1fr; width:100%; gap:.5rem; }
+ .cecyte-alumnos > div:first-child button { justify-content:center; padding:.65rem .5rem; font-size:.72rem; white-space:nowrap; }
+ .cecyte-overview { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; }
+ .cecyte-stat { min-height:94px; padding:.75rem .65rem; border-radius:12px; }
+ .cecyte-stat-label { font-size:.59rem; }
+ .cecyte-stat strong { font-size:1.25rem; }
+ .cecyte-stat small { font-size:.58rem; }
+ .cecyte-toolbar { align-items:stretch; }
+ .cecyte-toolbar > div { width:100%; max-width:none; }
+ .cecyte-table-shell { border-radius:13px; }
+ .cecyte-alumnos table { min-width:1120px; }
+ .cecyte-alumnos tbody td { padding:.68rem .65rem; }
+ .cecyte-alumnos .fixed.inset-0 { align-items:flex-end; padding:.5rem; }
+ .cecyte-alumnos .fixed.inset-0 > div { max-height:94dvh; overflow-y:auto; border-radius:18px 18px 12px 12px; padding:1.1rem !important; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .cecyte-alumnos * { transition-duration:.01ms !important; animation-duration:.01ms !important; }
+}

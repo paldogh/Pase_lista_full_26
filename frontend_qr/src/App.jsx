@@ -11,56 +11,42 @@ import ForgotPassword from "./Components/ForgotPassword";
 import ResetPassword from "./Components/ResetPassword";
 import Asistencia from "./Components/Asistencia";
 import Profesores from "./Components/Profesores";
-import Grupos from "./Components/Grupos"; 
+import Grupos from "./Components/Grupos";
+import "./styles/Institutional.css";
 
-
-const RutaPrivada = ({ children }) => {
-  const token = localStorage.getItem("token");
-
-  //* Si NO hay token guardado, redirigimos inmediatamente al Login ("/")
-  if (!token) {
-    return <Navigate to="/" replace />;
-  }
-
-  //* Si SÍ hay token, renderizamos el contenido
-  return children;
-};
+function RutaPrivada({ children }) {
+  return localStorage.getItem("token") ? children : <Navigate to="/" replace />;
+}
 
 function App() {
   return (
     <Routes>
-      {/* --- RUTAS PÚBLICAS --- */}
       <Route path="/" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-
-      {/* --- RUTAS DE RESETEO DE CONTRASEÑA --- */}
       <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-      {/* --- RUTAS PRIVADAS --- */}
-      <Route
-        path="/*"
-        element={
-          <RutaPrivada>
-            <div className="flex h-screen w-full bg-slate-100 overflow-hidden">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto p-8">
+      <Route path="/*" element={
+        <RutaPrivada>
+          <div className="institutional-app">
+            <Sidebar />
+            <main className="institutional-main">
+              <div className="institutional-content">
                 <Routes>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/alumnos" element={<Alumnos />} />
                   <Route path="/profesores" element={<Profesores />} />
-                     <Route path="/grupos" element={<Grupos />} />
+                  <Route path="/grupos" element={<Grupos />} />
                   <Route path="/materias" element={<Materias />} />
                   <Route path="/pases-lista" element={<PaseLista />} />
                   <Route path="/asistencia" element={<Asistencia />} />
                   <Route path="/reportes" element={<Reportes />} />
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
                 </Routes>
-              </main>
-            </div>
-          </RutaPrivada>
-        }
-      />
+              </div>
+            </main>
+          </div>
+        </RutaPrivada>
+      } />
     </Routes>
   );
 }

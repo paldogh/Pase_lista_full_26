@@ -20,6 +20,11 @@ function Alumnos() {
     const [importando, setImportando] = useState(false);
 
     const inputFileRef = useRef(null);
+    const videoRef = useRef(null);
+    const cameraStreamRef = useRef(null);
+    const [camaraAlumno, setCamaraAlumno] = useState(null);
+    const [errorCamara, setErrorCamara] = useState("");
+    const [capturandoFoto, setCapturandoFoto] = useState(false);
     const [fotoModal, setFotoModal] = useState(null);
     const [fotoUrls, setFotoUrls] = useState({});
     const [cargandoFoto, setCargandoFoto] = useState({});
@@ -35,6 +40,60 @@ function Alumnos() {
         grupoId: "",
         tutor: { nombre: "", telefono: "", correo: "" }
     });
+
+    useEffect(() => {
+        if (!camaraAlumno) return;
+
+        let cancelado = false;
+
+        const iniciarCamara = async () => {
+            try {
+                if (!navigator.mediaDevices?.getUserMedia) {
+                    throw new Error("Este navegador no permite acceder a la cámara. Usa HTTPS o un navegador compatible.");
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: "environment" },
+                        width: { ideal: 1280 },
+                        height: { ideal: 960 }
+                    },
+                    audio: false
+                });
+
+                if (cancelado) {
+                    stream.getTracks().forEach((track) => track.stop());
+                    return;
+                }
+
+                cameraStreamRef.current = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    await videoRef.current.play().catch(() => {});
+                }
+            } catch (error) {
+                console.error("No se pudo iniciar la cámara:", error);
+                if (!cancelado) {
+                    const mensaje = error.name === "NotAllowedError"
+                        ? "Permite el acceso a la cámara desde los permisos del navegador."
+                        : error.name === "NotFoundError"
+                            ? "No se encontró una cámara disponible en este dispositivo."
+                            : error.message || "No fue posible iniciar la cámara.";
+                    setErrorCamara(mensaje);
+                }
+            }
+        };
+
+        iniciarCamara();
+
+        return () => {
+            cancelado = true;
+            if (cameraStreamRef.current) {
+                cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+                cameraStreamRef.current = null;
+            }
+        };
+    }, [camaraAlumno]);
 
     useEffect(() => {
         obtenerAlumnos();
@@ -159,6 +218,60 @@ function Alumnos() {
             alert(error.response?.data?.message || "No se pudo subir la fotografía.");
         } finally {
             setSubiendoFoto((prev) => ({ ...prev, [matricula]: false }));
+        }
+    };
+
+    const abrirCamara = (alumno) => {
+        setErrorCamara("");
+        setCamaraAlumno(alumno);
+    };
+
+    const cerrarCamara = () => {
+        if (cameraStreamRef.current) {
+            cameraStreamRef.current.getTracks().forEach((track) => track.stop());
+            cameraStreamRef.current = null;
+        }
+        setCamaraAlumno(null);
+        setErrorCamara("");
+        setCapturandoFoto(false);
+    };
+
+    const tomarFoto = async () => {
+        const video = videoRef.current;
+        if (!video || !video.videoWidth || !video.videoHeight || !camaraAlumno) {
+            setErrorCamara("La cámara todavía no está lista. Espera un momento e inténtalo de nuevo.");
+            return;
+        }
+
+        setCapturandoFoto(true);
+        try {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("No fue posible procesar la imagen.");
+
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(
+                    (resultado) => resultado ? resolve(resultado) : reject(new Error("No se pudo generar la fotografía.")),
+                    "image/jpeg",
+                    0.88
+                );
+            });
+
+            const nombreArchivo = `alumno-${camaraAlumno.matricula}-${Date.now()}.jpg`;
+            const archivo = new File([blob], nombreArchivo, { type: "image/jpeg" });
+            const alumno = camaraAlumno;
+
+            cerrarCamara();
+            await subirFoto(alumno, archivo);
+        } catch (error) {
+            console.error("Error al capturar fotografía:", error);
+            setErrorCamara(error.message || "No fue posible capturar la fotografía.");
+        } finally {
+            setCapturandoFoto(false);
         }
     };
 
@@ -476,10 +589,28 @@ const confirmarImportacionMasiva = async () => {
                                     <td className="p-3 text-center">
                                         <div className="flex flex-col items-center gap-1">
                                             <button onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 text-xs font-medium" title="Ver Código QR"><QrCode size={14} /> QR</button>
-                                            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                                                <Camera size={14} /> {subiendoFoto[a.matricula] ? "Subiendo..." : a.fotoKey ? "Cambiar foto" : "Subir foto"}
-                                                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!subiendoFoto[a.matricula]} onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }} />
-                                            </label>
+                                            <div className="flex flex-wrap items-center justify-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => abrirCamara(a)}
+                                                    disabled={!!subiendoFoto[a.matricula]}
+                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    title="Tomar fotografía con la cámara"
+                                                >
+                                                    <Camera size={14} /> Cámara
+                                                </button>
+                                                <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                                                    <Upload size={13} /> Archivo
+                                                    <input
+                                                        type="file"
+                                                        accept="image/jpeg,image/png,image/webp"
+                                                        className="hidden"
+                                                        disabled={!!subiendoFoto[a.matricula]}
+                                                        onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }}
+                                                    />
+                                                </label>
+                                            </div>
+                                            {subiendoFoto[a.matricula] && <span className="text-[10px] text-emerald-700">Guardando foto...</span>}
                                         </div>
                                     </td>
 
@@ -786,6 +917,66 @@ const confirmarImportacionMasiva = async () => {
                         </div>
 
                     </div>
+                </div>
+            )}
+
+            {camaraAlumno && (
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm"
+                    onClick={cerrarCamara}
+                >
+                    <section
+                        className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/20 bg-white shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Expediente digital</p>
+                                <h2 className="mt-1 text-lg font-bold text-slate-900">Fotografía del alumno</h2>
+                                <p className="text-xs text-slate-500">{camaraAlumno.nombre} {camaraAlumno.apellidoPaterno} · {camaraAlumno.matricula}</p>
+                            </div>
+                            <button type="button" onClick={cerrarCamara} className="rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Cerrar cámara">
+                                <X size={20} />
+                            </button>
+                        </header>
+
+                        <div className="space-y-3 p-4 sm:p-5">
+                            {errorCamara ? (
+                                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800" role="alert">
+                                    <div className="mb-1 flex items-center gap-2 font-semibold"><AlertTriangle size={17} /> No se pudo abrir la cámara</div>
+                                    {errorCamara}
+                                    <p className="mt-2 text-xs text-rose-700">Comprueba los permisos del navegador y vuelve a intentarlo.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-hidden rounded-xl bg-slate-950">
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="block max-h-[62vh] min-h-[240px] w-full object-contain"
+                                    />
+                                </div>
+                            )}
+                            <p className="text-xs leading-5 text-slate-500">
+                                Coloca al alumno frente a la cámara, con el rostro iluminado y centrado. La imagen se enviará al almacenamiento privado del expediente.
+                            </p>
+                        </div>
+
+                        <footer className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50 px-4 py-4 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={cerrarCamara} className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100">
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={tomarFoto}
+                                disabled={!!errorCamara || capturandoFoto}
+                                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#078566] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#066e55] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Camera size={17} /> {capturandoFoto ? "Procesando..." : "Capturar y guardar"}
+                            </button>
+                        </footer>
+                    </section>
                 </div>
             )}
 

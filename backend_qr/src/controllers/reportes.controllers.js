@@ -21,9 +21,7 @@ const __dirname = path.dirname(__filename);
 const obtenerAsistenciasFiltradas = async (query = {}) => {
 
     const {
-        carreraId,
         grupoId,
-        materiaId,
         estado,
         fechaInicio,
         fechaFin
@@ -37,19 +35,6 @@ const obtenerAsistenciasFiltradas = async (query = {}) => {
         valor !== "undefined";
 
     const where = {};
-
-    // ---------------------------------------
-    // VALIDAR CARRERA
-    // ---------------------------------------
-
-    if (filtroActivo(carreraId)) {
-        const error = new Error(
-            "El esquema actual no relaciona Grupo con Carrera. " +
-            "El filtro por carrera no está disponible."
-        );
-        error.statusCode = 400;
-        throw error;
-    }
 
     // ---------------------------------------
     // FILTRO POR ESTADO
@@ -140,22 +125,6 @@ const obtenerAsistenciasFiltradas = async (query = {}) => {
     }
 
     // ---------------------------------------
-    // FILTRO POR MATERIA
-    // ---------------------------------------
-
-    if (filtroActivo(materiaId)) {
-        where.SesionQR = {
-            is: {
-                MaestroMateriaGrupo: {
-                    is: {
-                        materiaId: String(materiaId)
-                    }
-                }
-            }
-        };
-    }
-
-    // ---------------------------------------
     // CONSULTA PRINCIPAL
     // ---------------------------------------
 
@@ -165,7 +134,8 @@ const obtenerAsistenciasFiltradas = async (query = {}) => {
         include: {
             alumno: {
                 include: {
-                    Grupo: true
+                    Grupo: true,
+                    Tutor: true
                 }
             },
 
@@ -173,7 +143,6 @@ const obtenerAsistenciasFiltradas = async (query = {}) => {
                 include: {
                     MaestroMateriaGrupo: {
                         include: {
-                            Materia: true,
                             Maestro: true
                         }
                     }
@@ -303,10 +272,9 @@ export const obtenerReporteGeneral = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error al generar reporte:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       ok: false,
-      mensaje: "Error al generar reporte",
-      error: error.message
+      mensaje: error.message || "Error al generar reporte"
     });
   }
 };
@@ -342,10 +310,9 @@ export const obtenerReportePorGrupo = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error al generar reporte por grupo:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       ok: false,
-      mensaje: "Error al generar reporte por grupo",
-      error: error.message
+      mensaje: error.message || "Error al generar reporte por grupo"
     });
   }
 };
@@ -495,7 +462,6 @@ export const exportarReportePDF = async (req, res) => {
         { label: 'Matricula', key: 'matricula', width: 85, align: 'left' },
         { label: 'Alumno', key: 'alumno', width: 170, align: 'left' },
         { label: 'Grupo', key: 'grupo', width: 80, align: 'left' },
-        { label: 'Materia', key: 'materia', width: 140, align: 'left' },
         { label: 'Estado', key: 'estado', width: 80, align: 'center' },
         { label: 'Fecha', key: 'fecha', width: 95, align: 'center' }
       ];
@@ -557,11 +523,7 @@ export const exportarReportePDF = async (req, res) => {
         else if (estadoLabel === 'Justificada') estadoColor = '#6a1b9a';
 
         const fecha = item.fechaHora
-          ? new Date(item.fechaHora).toLocaleDateString('es-MX', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          })
+          ? new Date(item.fechaHora).toLocaleString('es-MX')
           : '-';
 
         const valores = [
@@ -569,8 +531,7 @@ export const exportarReportePDF = async (req, res) => {
           { value: item.alumno?.matricula || '-', align: 'left' },
           { value: nombreCompleto || '-', align: 'left' },
           { value: item.alumno?.grupo?.nombre || '-', align: 'left' },
-          { value: item.sesionQR?.mmg?.materia?.nombre || '-', align: 'left' },
-          { value: estadoLabel, align: 'center', color: estadoColor },
+            { value: estadoLabel, align: 'center', color: estadoColor },
           { value: fecha, align: 'center' }
         ];
 
@@ -754,13 +715,13 @@ export const exportarReporteExcel = async (req, res) => {
     };
     const titulo = titulos[tipoReporte] || 'Reporte de Asistencias';
 
-    worksheet.mergeCells('A1:G1');
+    worksheet.mergeCells('A1:F1');
     worksheet.getCell('A1').value = titulo;
     worksheet.getCell('A1').font = { bold: true, size: 14, name: 'Arial' };
     worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
     worksheet.getRow(1).height = 35;
 
-    worksheet.mergeCells('A2:G2');
+    worksheet.mergeCells('A2:F2');
     worksheet.getCell('A2').value = `Generado: ${new Date().toLocaleString('es-MX')}`;
     worksheet.getCell('A2').font = { size: 10, name: 'Arial', color: { argb: 'FF666666' } };
     worksheet.getCell('A2').alignment = { horizontal: 'center', vertical: 'middle' };
@@ -769,7 +730,7 @@ export const exportarReporteExcel = async (req, res) => {
     // ============================================================
     // 2. CABECERA
     // ============================================================
-    const headers = ['#', 'Matricula', 'Alumno', 'Grupo', 'Materia', 'Estado', 'Fecha'];
+    const headers = ['#', 'Matricula', 'Alumno', 'Grupo', 'Estado', 'Fecha y hora'];
     const headerRow = worksheet.addRow(headers);
 
     headerRow.font = { bold: true, size: 11, name: 'Arial', color: { argb: 'FFFFFFFF' } };
@@ -781,9 +742,8 @@ export const exportarReporteExcel = async (req, res) => {
     worksheet.getColumn(2).width = 18;
     worksheet.getColumn(3).width = 35;
     worksheet.getColumn(4).width = 15;
-    worksheet.getColumn(5).width = 30;
-    worksheet.getColumn(6).width = 16;
-    worksheet.getColumn(7).width = 20;
+    worksheet.getColumn(5).width = 16;
+    worksheet.getColumn(6).width = 22;
 
     // ============================================================
     // 3. DATOS
@@ -811,9 +771,8 @@ export const exportarReporteExcel = async (req, res) => {
           a.alumno?.matricula || '-',
           nombreCompleto || '-',
           a.alumno?.grupo?.nombre || '-',
-          a.sesionQR?.mmg?.materia?.nombre || '-',
           estadoLabel,
-          fecha
+          a.fechaHora ? new Date(a.fechaHora).toLocaleString('es-MX') : '-'
         ]);
 
         const fillColor = index % 2 === 0 ? 'FFF8F9FA' : 'FFFFFFFF';
@@ -837,11 +796,10 @@ export const exportarReporteExcel = async (req, res) => {
         row.getCell(2).alignment = { horizontal: 'left', vertical: 'middle' };
         row.getCell(3).alignment = { horizontal: 'left', vertical: 'middle' };
         row.getCell(4).alignment = { horizontal: 'left', vertical: 'middle' };
-        row.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+        row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
         row.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
-        row.getCell(7).alignment = { horizontal: 'center', vertical: 'middle' };
 
-        const estadoCell = row.getCell(6);
+        const estadoCell = row.getCell(5);
         const estadoValue = estadoCell.value;
         let color = 'FF333333';
         let bold = false;
@@ -880,21 +838,21 @@ export const exportarReporteExcel = async (req, res) => {
       const totalRow = worksheet.addRow([]);
       const currentRow = worksheet.rowCount;
       
-      worksheet.mergeCells(`A${currentRow}:E${currentRow}`);
+      worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
       totalRow.getCell(1).value = 'Total de registros:';
       totalRow.getCell(1).font = { bold: true, size: 11, name: 'Arial' };
       totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
       
-      worksheet.mergeCells(`F${currentRow}:G${currentRow}`);
-      totalRow.getCell(6).value = asistencias.length;
-      totalRow.getCell(6).font = { bold: true, size: 12, name: 'Arial', color: { argb: 'FF1A237E' } };
-      totalRow.getCell(6).alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.mergeCells(`E${currentRow}:F${currentRow}`);
+      totalRow.getCell(5).value = asistencias.length;
+      totalRow.getCell(5).font = { bold: true, size: 12, name: 'Arial', color: { argb: 'FF1A237E' } };
+      totalRow.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
       totalRow.height = 28;
 
       const detailRow = worksheet.addRow([]);
       const currentRow2 = worksheet.rowCount;
       
-      worksheet.mergeCells(`A${currentRow2}:G${currentRow2}`);
+      worksheet.mergeCells(`A${currentRow2}:F${currentRow2}`);
       detailRow.getCell(1).value = `Presentes: ${totalPresentes}   |   Faltas: ${totalFaltas}   |   Retardos: ${totalRetardos}   |   Justificadas: ${totalJustificadas}`;
       detailRow.getCell(1).font = { size: 10, name: 'Arial' };
       detailRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
