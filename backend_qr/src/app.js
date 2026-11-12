@@ -13,7 +13,7 @@ import maestroRoutes from "./routes/maestro.routes.js";
 import reportesRoutes from "./routes/reportes.routes.js";
 import gruposRoutes from "./routes/grupos.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
-
+import fotosRoutes from "./routes/fotos.routes.js";
 const app = express();
 
 // ======================================================
@@ -144,7 +144,7 @@ app.get("/health", (_req, res) => {
 app.use("/api", loginRoutes);
 
 app.use("/api/alumnos", alumnosRoutes);
-
+app.use("/api/alumnos", fotosRoutes);
 app.use("/api", materiaRoutes);
 
 app.use("/api/stats", statsRoutes);

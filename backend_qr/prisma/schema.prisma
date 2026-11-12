@@ -23,6 +23,10 @@ model Alumno {
   tutorId         String?
   usuarioId       String? @unique
 
+  // Referencias de fotografías en Backblaze B2
+  fotoUrl         String?
+  fotoKey         String?
+
   Grupo   Grupo    @relation(fields: [grupoId], references: [id])
   Tutor   Tutor?   @relation(fields: [tutorId], references: [id])
   Usuario Usuario? @relation(fields: [usuarioId], references: [id])
