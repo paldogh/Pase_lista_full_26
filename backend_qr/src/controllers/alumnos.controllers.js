@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 
 import prisma from "../config/prisma.js";
 
@@ -46,14 +47,8 @@ export const obtenerAlumnos = async (req, res) => {
 export const crearAlumno = async (req, res) => {
     try {
         const {
-            matricula,
-            nombre,
-            apellidoPaterno,
-            apellidoMaterno,
-            correoElectronico,
-            correo,
-            telefono,
-            grupoId
+            matricula, nombre, apellidoPaterno, apellidoMaterno,
+            correoElectronico, correo, telefono, grupoId, tutor
         } = req.body;
 
         const matriculaLimpia = limpiarTexto(matricula);
@@ -61,42 +56,20 @@ export const crearAlumno = async (req, res) => {
         const grupoIdLimpio = limpiarTexto(grupoId);
 
         if (!matriculaLimpia || !nombreLimpio || !grupoIdLimpio) {
-            return res.status(400).json({
-                success: false,
-                message: "La matrícula, el nombre y el grupo son obligatorios."
-            });
+            return res.status(400).json({ success: false, message: "La matrícula, el nombre y el grupo son obligatorios." });
         }
 
-        // Comprobar que el grupo exista.
-        const grupo = await prisma.grupo.findFirst({
-            where: {
-                OR: [
-                    { id: grupoIdLimpio },
-                    { nombre: grupoIdLimpio }
-                ]
-            }
-        });
+        const grupo = await prisma.grupo.findFirst({ where: { OR: [{ id: grupoIdLimpio }, { nombre: grupoIdLimpio }] } });
+        if (!grupo) return res.status(400).json({ success: false, message: `No existe un grupo con el identificador o nombre "${grupoIdLimpio}".` });
 
-        if (!grupo) {
-            return res.status(400).json({
-                success: false,
-                message: `No existe un grupo con el identificador o nombre "${grupoIdLimpio}".`
-            });
-        }
+        const existente = await prisma.alumno.findUnique({ where: { matricula: matriculaLimpia } });
+        if (existente) return res.status(409).json({ success: false, message: `La matrícula ${matriculaLimpia} ya está registrada.` });
 
-        // Evitar matrículas duplicadas.
-        const existente = await prisma.alumno.findUnique({
-            where: {
-                matricula: matriculaLimpia
-            }
-        });
-
-        if (existente) {
-            return res.status(409).json({
-                success: false,
-                message: `La matrícula ${matriculaLimpia} ya está registrada.`
-            });
-        }
+        const datosTutor = tutor && typeof tutor === "object" ? {
+            nombre: limpiarTexto(tutor.nombre),
+            telefono: limpiarTexto(tutor.telefono),
+            correo: limpiarTexto(tutor.correo),
+        } : null;
 
         const nuevoAlumno = await prisma.alumno.create({
             data: {
@@ -104,25 +77,18 @@ export const crearAlumno = async (req, res) => {
                 nombre: nombreLimpio,
                 apellidoPaterno: limpiarTexto(apellidoPaterno),
                 apellidoMaterno: limpiarTexto(apellidoMaterno),
-                correo: limpiarTexto(correoElectronico || correo),
-                telefono: limpiarTexto(telefono),
-                grupoId: grupo.id
-            }
+                correo: limpiarTexto(correoElectronico || correo) || null,
+                telefono: limpiarTexto(telefono) || null,
+                grupoId: grupo.id,
+                ...(datosTutor?.nombre ? { Tutor: { create: { id: randomUUID(), ...datosTutor } } } : {}),
+            },
+            include: { Grupo: true, Tutor: true },
         });
 
-        return res.status(201).json({
-            success: true,
-            message: "Alumno creado correctamente",
-            data: nuevoAlumno
-        });
+        return res.status(201).json({ success: true, message: "Alumno creado correctamente", data: nuevoAlumno });
     } catch (error) {
         console.error("Error al crear alumno:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Error al guardar el alumno",
-            error: error.message
-        });
+        return res.status(500).json({ success: false, message: "Error al guardar el alumno", error: error.message });
     }
 };
 
@@ -321,66 +287,57 @@ export const cargaMasivaAlumnos = async (req, res) => {
 export const actualizarAlumno = async (req, res) => {
     try {
         const { id } = req.params;
-
         const {
-            nombre,
-            apellidoPaterno,
-            apellidoMaterno,
-            correoElectronico,
-            correo,
-            telefono,
-            grupoId
+            nombre, apellidoPaterno, apellidoMaterno, correoElectronico,
+            correo, telefono, grupoId, tutor
         } = req.body;
 
-        const datos = {
-            nombre: limpiarTexto(nombre),
-            apellidoPaterno: limpiarTexto(apellidoPaterno),
-            apellidoMaterno: limpiarTexto(apellidoMaterno),
-            correo: limpiarTexto(correoElectronico || correo),
-            telefono: limpiarTexto(telefono)
-        };
+        const alumnoExistente = await prisma.alumno.findUnique({ where: { matricula: id }, include: { Tutor: true } });
+        if (!alumnoExistente) return res.status(404).json({ success: false, message: "No se encontró el alumno." });
+
+        const datos = {};
+        if (nombre !== undefined) datos.nombre = limpiarTexto(nombre);
+        if (apellidoPaterno !== undefined) datos.apellidoPaterno = limpiarTexto(apellidoPaterno);
+        if (apellidoMaterno !== undefined) datos.apellidoMaterno = limpiarTexto(apellidoMaterno) || null;
+        if (correoElectronico !== undefined || correo !== undefined) datos.correo = limpiarTexto(correoElectronico ?? correo) || null;
+        if (telefono !== undefined) datos.telefono = limpiarTexto(telefono) || null;
 
         if (grupoId !== undefined) {
             const grupoTexto = limpiarTexto(grupoId);
-
-            const grupo = await prisma.grupo.findFirst({
-                where: {
-                    OR: [
-                        { id: grupoTexto },
-                        { nombre: grupoTexto }
-                    ]
-                }
-            });
-
-            if (!grupo) {
-                return res.status(400).json({
-                    success: false,
-                    message: `No existe el grupo "${grupoTexto}".`
-                });
-            }
-
+            const grupo = await prisma.grupo.findFirst({ where: { OR: [{ id: grupoTexto }, { nombre: grupoTexto }] } });
+            if (!grupo) return res.status(400).json({ success: false, message: `No existe el grupo "${grupoTexto}".` });
             datos.grupoId = grupo.id;
         }
 
-        const alumnoActualizado = await prisma.alumno.update({
-            where: { matricula: id },
-            data: datos
+        const tutorEnviado = tutor && typeof tutor === "object";
+        const datosTutor = tutorEnviado ? {
+            nombre: limpiarTexto(tutor.nombre),
+            telefono: limpiarTexto(tutor.telefono),
+            correo: limpiarTexto(tutor.correo),
+        } : null;
+
+        const actualizado = await prisma.$transaction(async (tx) => {
+            if (tutorEnviado) {
+                if (datosTutor.nombre && alumnoExistente.tutorId) {
+                    await tx.tutor.update({ where: { id: alumnoExistente.tutorId }, data: datosTutor });
+                } else if (datosTutor.nombre && !alumnoExistente.tutorId) {
+                    const nuevoTutor = await tx.tutor.create({ data: { id: randomUUID(), ...datosTutor } });
+                    datos.tutorId = nuevoTutor.id;
+                } else if (!datosTutor.nombre && alumnoExistente.tutorId) {
+                    // Desvincula al tutor, sin borrar su registro por si está asociado a otro alumno.
+                    datos.tutorId = null;
+                }
+            }
+            return tx.alumno.update({ where: { matricula: id }, data: datos, include: { Grupo: true, Tutor: true } });
         });
 
-        return res.status(200).json({
-            success: true,
-            message: "Alumno actualizado correctamente",
-            data: alumnoActualizado
-        });
+        return res.status(200).json({ success: true, message: "Alumno actualizado correctamente", data: actualizado });
     } catch (error) {
         console.error("Error al actualizar alumno:", error);
-
         return res.status(error.code === "P2025" ? 404 : 500).json({
             success: false,
-            message: error.code === "P2025"
-                ? "No se encontró el alumno."
-                : "Error al actualizar el alumno.",
-            error: error.message
+            message: error.code === "P2025" ? "No se encontró el alumno o tutor." : "Error al actualizar el alumno.",
+            error: error.message,
         });
     }
 };

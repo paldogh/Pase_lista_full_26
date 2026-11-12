@@ -2,7 +2,6 @@ import prisma from "../config/prisma.js";
 
 const DIAS = 7;
 
-// Clave YYYY-MM-DD en hora LOCAL (toISOString usaría UTC y movería el día)
 const claveDia = (d) => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -21,38 +20,45 @@ export const obtenerResumenDashboard = async (req, res) => {
     const desde = new Date(hoy);
     desde.setDate(desde.getDate() - (DIAS - 1));
 
-    const [alumnosActivos, grupos, profesores, asistenciasHoy, ultimos, semana] =
-      await Promise.all([
-        prisma.alumno.count({ where: { activo: true } }),
-        prisma.grupo.count(),
-        prisma.maestro.count(),
-        prisma.asistencia.count({
-          where: { fechaHora: { gte: hoy, lt: manana } },
-        }),
-        prisma.asistencia.findMany({
-          take: 5,
-          orderBy: { fechaHora: "desc" },
-          select: {
-            id: true,
-            fechaHora: true,
-            estado: true,
-            alumno: {
-              select: {
-                nombre: true,
-                apellidoPaterno: true,
-                apellidoMaterno: true,
-                Grupo: { select: { nombre: true } },
-              },
+    const [
+      alumnosActivos,
+      alumnosConFoto,
+      alumnosSinFoto,
+      grupos,
+      profesores,
+      asistenciasHoy,
+      ultimos,
+      semana,
+    ] = await Promise.all([
+      prisma.alumno.count({ where: { activo: true } }),
+      prisma.alumno.count({ where: { activo: true, fotoKey: { not: null } } }),
+      prisma.alumno.count({ where: { activo: true, fotoKey: null } }),
+      prisma.grupo.count(),
+      prisma.maestro.count(),
+      prisma.asistencia.count({ where: { fechaHora: { gte: hoy, lt: manana } } }),
+      prisma.asistencia.findMany({
+        take: 5,
+        orderBy: { fechaHora: "desc" },
+        select: {
+          id: true,
+          fechaHora: true,
+          estado: true,
+          alumno: {
+            select: {
+              nombre: true,
+              apellidoPaterno: true,
+              apellidoMaterno: true,
+              Grupo: { select: { nombre: true } },
             },
           },
-        }),
-        prisma.asistencia.findMany({
-          where: { fechaHora: { gte: desde, lt: manana } },
-          select: { fechaHora: true, estado: true },
-        }),
-      ]);
+        },
+      }),
+      prisma.asistencia.findMany({
+        where: { fechaHora: { gte: desde, lt: manana } },
+        select: { fechaHora: true, estado: true },
+      }),
+    ]);
 
-    // Serie de los últimos 7 días (incluye días sin registros, en cero)
     const dias = [];
     for (let i = 0; i < DIAS; i++) {
       const d = new Date(desde);
@@ -67,7 +73,6 @@ export const obtenerResumenDashboard = async (req, res) => {
       });
     }
     const porDia = new Map(dias.map((d) => [d.fecha, d]));
-
     for (const a of semana) {
       const fila = porDia.get(claveDia(a.fechaHora));
       if (fila) fila[a.estado.toLowerCase()] += 1;
@@ -76,7 +81,17 @@ export const obtenerResumenDashboard = async (req, res) => {
     return res.json({
       success: true,
       data: {
-        tarjetas: { alumnosActivos, grupos, profesores, asistenciasHoy },
+        tarjetas: {
+          alumnosActivos,
+          alumnosConFoto,
+          alumnosSinFoto,
+          porcentajeFotos: alumnosActivos > 0
+            ? Number(((alumnosConFoto / alumnosActivos) * 100).toFixed(1))
+            : 0,
+          grupos,
+          profesores,
+          asistenciasHoy,
+        },
         ultimosRegistros: ultimos.map((a) => ({
           id: a.id,
           fechaHora: a.fechaHora,
