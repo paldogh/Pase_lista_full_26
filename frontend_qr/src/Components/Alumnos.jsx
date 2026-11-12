@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import api from "../api";
-import { Plus, X, Edit, Trash2, Search, Filter, QrCode, Upload, CheckCircle, AlertTriangle } from "lucide-react";
+import { Plus, X, Edit, Trash2, Search, Filter, QrCode, Upload, CheckCircle, AlertTriangle, Camera, UserRound } from "lucide-react";
 import * as XLSX from "xlsx";
 
 function Alumnos() {
@@ -20,6 +20,10 @@ function Alumnos() {
     const [importando, setImportando] = useState(false);
 
     const inputFileRef = useRef(null);
+    const [fotoModal, setFotoModal] = useState(null);
+    const [fotoUrls, setFotoUrls] = useState({});
+    const [cargandoFoto, setCargandoFoto] = useState({});
+    const [subiendoFoto, setSubiendoFoto] = useState({});
 
     const [formulario, setFormulario] = useState({
         matricula: "",
@@ -28,7 +32,8 @@ function Alumnos() {
         apellidoMaterno: "",
         correoElectronico: "",
         telefono: "",
-        grupoId: ""
+        grupoId: "",
+        tutor: { nombre: "", telefono: "", correo: "" }
     });
 
     useEffect(() => {
@@ -71,7 +76,8 @@ function Alumnos() {
             apellidoMaterno: "",
             correoElectronico: "",
             telefono: "",
-            grupoId: ""
+            grupoId: "",
+            tutor: { nombre: "", telefono: "", correo: "" }
         });
         setMostrarModal(true);
     };
@@ -86,9 +92,74 @@ function Alumnos() {
             apellidoMaterno: alumno.apellidoMaterno || "",
             correoElectronico: alumno.correo || alumno.correoElectronico || "",
             telefono: alumno.telefono || "",
-            grupoId: alumno.grupoId || ""
+            grupoId: alumno.grupoId || "",
+            tutor: {
+                nombre: alumno.Tutor?.nombre || "",
+                telefono: alumno.Tutor?.telefono || "",
+                correo: alumno.Tutor?.correo || ""
+            }
         });
         setMostrarModal(true);
+    };
+
+    const handleTutorChange = (e) => {
+        const { name, value } = e.target;
+        setFormulario((prev) => ({ ...prev, tutor: { ...prev.tutor, [name]: value } }));
+    };
+
+    const consultarFoto = async (alumno) => {
+        const matricula = alumno.matricula;
+        if (!alumno.fotoKey) {
+            setFotoModal({ alumno, url: null, mensaje: "Este alumno todavía no tiene fotografía." });
+            return;
+        }
+        const fotoEnCache = fotoUrls[matricula];
+        if (fotoEnCache && Date.now() - fotoEnCache.guardadaEn < 9 * 60 * 1000) {
+            setFotoModal({ alumno, url: fotoEnCache.url });
+            return;
+        }
+        setCargandoFoto((prev) => ({ ...prev, [matricula]: true }));
+        try {
+            const { data } = await api.get(`/alumnos/${encodeURIComponent(matricula)}/foto`);
+            const url = data?.data?.url;
+            if (!url) throw new Error("El servidor no devolvió la URL de la fotografía.");
+            setFotoUrls((prev) => ({ ...prev, [matricula]: { url, guardadaEn: Date.now() } }));
+            setFotoModal({ alumno, url });
+        } catch (error) {
+            alert(error.response?.data?.message || "No se pudo consultar la fotografía.");
+        } finally {
+            setCargandoFoto((prev) => ({ ...prev, [matricula]: false }));
+        }
+    };
+
+    const subirFoto = async (alumno, archivo) => {
+        if (!archivo) return;
+        const tipos = ["image/jpeg", "image/png", "image/webp"];
+        if (!tipos.includes(archivo.type)) {
+            alert("Selecciona una imagen JPG, PNG o WEBP.");
+            return;
+        }
+        if (archivo.size > 5 * 1024 * 1024) {
+            alert("La fotografía no debe superar 5 MB.");
+            return;
+        }
+        const matricula = alumno.matricula;
+        const formData = new FormData();
+        formData.append("foto", archivo);
+        setSubiendoFoto((prev) => ({ ...prev, [matricula]: true }));
+        try {
+            const respuesta = await api.post(`/alumnos/${encodeURIComponent(matricula)}/foto`, formData);
+            setFotoUrls((prev) => { const next = { ...prev }; delete next[matricula]; return next; });
+            await obtenerAlumnos();
+            alert("Fotografía guardada correctamente.");
+            if (respuesta.data?.data?.fotoKey) {
+                await consultarFoto({ ...alumno, fotoKey: respuesta.data.data.fotoKey });
+            }
+        } catch (error) {
+            alert(error.response?.data?.message || "No se pudo subir la fotografía.");
+        } finally {
+            setSubiendoFoto((prev) => ({ ...prev, [matricula]: false }));
+        }
     };
 
     const abrirModalQR = (alumno) => {
@@ -369,6 +440,7 @@ const confirmarImportacionMasiva = async () => {
                 <table className="min-w-[900px] w-full">
                     <thead className="bg-slate-200">
                         <tr>
+                            <th className="p-3 text-center">Foto</th>
                             <th className="p-3 text-left">Matrícula</th>
                             <th className="p-3 text-left">Nombre</th>
                             <th className="p-3 text-left">Apellidos</th>
@@ -382,13 +454,18 @@ const confirmarImportacionMasiva = async () => {
                     <tbody>
                         {alumnosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan="8" className="p-4 text-center text-gray-500">
+                                <td colSpan="9" className="p-4 text-center text-gray-500">
                                     No se encontraron alumnos registrados con esos criterios.
                                 </td>
                             </tr>
                         ) : (
                             alumnosFiltrados.map((a) => (
                                 <tr key={a.matricula || a.id} className="border-b hover:bg-slate-50">
+                                    <td className="p-2 text-center">
+                                        <button type="button" onClick={() => consultarFoto(a)} title="Ver fotografía" className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500 hover:ring-2 hover:ring-blue-300">
+                                            {fotoUrls[a.matricula]?.url ? <img src={fotoUrls[a.matricula].url} alt={`Foto ${a.nombre}`} className="h-full w-full object-cover" /> : cargandoFoto[a.matricula] ? <span className="text-[10px]">...</span> : <UserRound size={20} />}
+                                        </button>
+                                    </td>
                                     <td className="p-3 font-medium text-slate-700">{a.matricula}</td>
                                     <td className="p-3 text-slate-600">{a.nombre}</td>
                                     <td className="p-3 text-slate-600">{`${a.apellidoPaterno || ''} ${a.apellidoMaterno || ''}`}</td>
@@ -397,14 +474,13 @@ const confirmarImportacionMasiva = async () => {
                                     <td className="p-3 text-slate-600">{a.Grupo?.nombre || a.grupoId}</td>
                                     
                                     <td className="p-3 text-center">
-                                        <button
-                                            onClick={() => abrirModalQR(a)}
-                                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 transition text-xs font-medium cursor-pointer"
-                                            title="Ver Código QR"
-                                        >
-                                            <QrCode size={14} />
-                                            Generado
-                                        </button>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <button onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 text-xs font-medium" title="Ver Código QR"><QrCode size={14} /> QR</button>
+                                            <label className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                                                <Camera size={14} /> {subiendoFoto[a.matricula] ? "Subiendo..." : a.fotoKey ? "Cambiar foto" : "Subir foto"}
+                                                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!subiendoFoto[a.matricula]} onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }} />
+                                            </label>
+                                        </div>
                                     </td>
 
                                     <td className="p-3 text-center flex justify-center gap-2">
@@ -433,7 +509,7 @@ const confirmarImportacionMasiva = async () => {
             {/* Modal para Crear y Editar */}
             {mostrarModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-3xl shadow-2xl max-h-[92vh] overflow-y-auto">
                         <div className="flex justify-between items-center pb-4 mb-4 border-b border-gray-100">
                             <h2 className="text-xl font-bold text-slate-800">
                                 {modoEdicion ? "Editar Alumno" : "Agregar Nuevo Alumno"}
@@ -509,7 +585,6 @@ const confirmarImportacionMasiva = async () => {
                                     value={formulario.correoElectronico}
                                     onChange={handleChange}
                                     className="border border-gray-300 w-full p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
                                 />
                             </div>
 
@@ -522,9 +597,18 @@ const confirmarImportacionMasiva = async () => {
                                     value={formulario.telefono}
                                     onChange={handleChange}
                                     className="border border-gray-300 w-full p-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
                                 />
                             </div>
+
+                            <section className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 space-y-3">
+                                <div className="flex items-center gap-2"><UserRound size={18} className="text-blue-700" /><h3 className="font-bold text-slate-800">Padre, madre o tutor responsable</h3></div>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div><label className="mb-1 block text-xs font-semibold uppercase text-gray-600">Nombre completo</label><input name="nombre" value={formulario.tutor.nombre} onChange={handleTutorChange} placeholder="Nombre del responsable" className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm" /></div>
+                                    <div><label className="mb-1 block text-xs font-semibold uppercase text-gray-600">Teléfono del responsable</label><input name="telefono" type="tel" value={formulario.tutor.telefono} onChange={handleTutorChange} placeholder="Teléfono de contacto" className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm" /></div>
+                                    <div><label className="mb-1 block text-xs font-semibold uppercase text-gray-600">Correo del responsable</label><input name="correo" type="email" value={formulario.tutor.correo} onChange={handleTutorChange} placeholder="correo@ejemplo.com" className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm" /></div>
+                                </div>
+                                <p className="text-xs text-slate-500">Se registran los datos de contacto del padre, madre o tutor responsable. Los datos son opcionales y pueden completarse posteriormente.</p>
+                            </section>
 
                             <div>
                                 <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Grupo</label>
@@ -701,6 +785,15 @@ const confirmarImportacionMasiva = async () => {
                             </div>
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {fotoModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setFotoModal(null)}>
+                    <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="mb-4 flex items-center justify-between"><div><h2 className="font-bold text-slate-800">Fotografía del alumno</h2><p className="text-sm text-slate-500">{fotoModal.alumno.nombre} {fotoModal.alumno.apellidoPaterno} · {fotoModal.alumno.matricula}</p></div><button onClick={() => setFotoModal(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18}/></button></div>
+                        {fotoModal.url ? <img src={fotoModal.url} alt={`Fotografía de ${fotoModal.alumno.nombre}`} className="mx-auto max-h-[65vh] w-auto max-w-full rounded-xl object-contain" /> : <div className="flex h-56 flex-col items-center justify-center rounded-xl bg-slate-50 text-slate-400"><UserRound size={54}/><p className="mt-2 text-sm">{fotoModal.mensaje}</p></div>}
                     </div>
                 </div>
             )}
