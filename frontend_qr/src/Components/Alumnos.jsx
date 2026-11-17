@@ -311,9 +311,9 @@ const enrolarRostro = async (alumno) => {
     }));
 
     try {
-        const respuesta = await api.post(
-            `/alumnos/${encodeURIComponent(matricula)}/enrolar-rostro`
-        );
+   const respuesta = await api.post(
+    `/alumnos/${encodeURIComponent(matricula)}/enrolamiento-facial`
+);
 
         const datos = respuesta.data?.data;
 
