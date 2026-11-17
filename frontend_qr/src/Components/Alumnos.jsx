@@ -2,7 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import api from "../api";
-import { Plus, X, Edit, Trash2, Search, Filter, QrCode, Upload, CheckCircle, AlertTriangle, Camera, UserRound } from "lucide-react";
+import {
+    Plus,
+    X,
+    Edit,
+    Trash2,
+    Search,
+    Filter,
+    QrCode,
+    Upload,
+    CheckCircle,
+    AlertTriangle,
+    Camera,
+    UserRound,
+    Fingerprint
+} from "lucide-react";
 import * as XLSX from "xlsx";
 
 function Alumnos() {
@@ -29,6 +43,7 @@ function Alumnos() {
     const [fotoUrls, setFotoUrls] = useState({});
     const [cargandoFoto, setCargandoFoto] = useState({});
     const [subiendoFoto, setSubiendoFoto] = useState({});
+    const [enrolandoRostro, setEnrolandoRostro] = useState({});
 
     const [formulario, setFormulario] = useState({
         matricula: "",
@@ -274,6 +289,64 @@ function Alumnos() {
             setCapturandoFoto(false);
         }
     };
+
+
+const enrolarRostro = async (alumno) => {
+    const matricula = alumno.matricula;
+
+    if (!alumno.fotoKey) {
+        alert("Primero debes registrar una fotografía del alumno.");
+        return;
+    }
+
+    if (!window.confirm(
+        `¿Deseas registrar el rostro de ${alumno.nombre} (${matricula})?`
+    )) {
+        return;
+    }
+
+    setEnrolandoRostro(prev => ({
+        ...prev,
+        [matricula]: true
+    }));
+
+    try {
+        const respuesta = await api.post(
+            `/alumnos/${encodeURIComponent(matricula)}/enrolar-rostro`
+        );
+
+        const datos = respuesta.data?.data;
+
+        if (!datos?.enrolled) {
+            throw new Error("El servidor no confirmó el enrolamiento.");
+        }
+
+        alert(
+            `¡Rostro registrado correctamente!\\n\\n` +
+            `Matrícula: ${datos.matricula}\\n` +
+            `Modelo: ${datos.model}`
+        );
+
+    } catch (error) {
+        console.error(
+            "[ENROLAMIENTO FACIAL]",
+            error.response?.data || error
+        );
+
+        alert(
+            error.response?.data?.message ||
+            error.message ||
+            "No fue posible registrar el rostro."
+        );
+
+    } finally {
+        setEnrolandoRostro(prev => ({
+            ...prev,
+            [matricula]: false
+        }));
+    }
+};
+
 
     const abrirModalQR = (alumno) => {
         setAlumnoSeleccionadoQR(alumno);
@@ -609,6 +682,30 @@ const confirmarImportacionMasiva = async () => {
                                                         onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }}
                                                     />
                                                 </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => enrolarRostro(a)}
+                                                    disabled={
+                                                        !a.fotoKey ||
+                                                        !!enrolandoRostro[a.matricula] ||
+                                                        !!subiendoFoto[a.matricula]
+                                                    }
+                                                    className="
+                                                        inline-flex items-center gap-1
+                                                        rounded-full px-2.5 py-1.5
+                                                        text-xs font-semibold
+                                                        bg-violet-50 text-violet-800
+                                                        hover:bg-violet-100
+                                                        disabled:opacity-50
+                                                        disabled:cursor-not-allowed
+                                                    "
+                                                    title="Registrar plantilla facial del alumno"
+                                                >
+                                                    <Fingerprint size={14} />
+                                                    {enrolandoRostro[a.matricula]
+                                                        ? "Enrolando..."
+                                                        : "Enrolar rostro"}
+                                                </button>
                                             </div>
                                             {subiendoFoto[a.matricula] && <span className="text-[10px] text-emerald-700">Guardando foto...</span>}
                                         </div>
