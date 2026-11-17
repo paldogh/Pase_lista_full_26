@@ -126,4 +126,7 @@ router.post(
     verificarToken,
     enrolarRostroAlumno
 );
+
+
+
 export default router;
