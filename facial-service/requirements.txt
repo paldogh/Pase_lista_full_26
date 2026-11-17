@@ -1,0 +1,10 @@
+fastapi>=0.110,<1
+uvicorn[standard]>=0.27,<1
+pydantic-settings>=2.2,<3
+sqlalchemy>=2.0,<3
+psycopg[binary]>=3.1,<4
+cryptography>=42,<46
+numpy>=1.26,<3
+opencv-python-headless>=4.9,<5
+deepface>=0.0.93,<0.1
+tf-keras>=2.16,<3

@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 
 import prisma from "../config/prisma.js";
-
+import { enrollFace } from "../services/facialRecognition.service.js";
 import {
     r2,
     BUCKET_NAME,
@@ -221,4 +221,107 @@ export const consultarFotoAlumno = async (req, res) => {
             message: "Error al consultar la fotografía."
         });
     }
+};
+
+
+export const enrolarRostroAlumno = async (req, res) => {
+  try {
+    // El enrolamiento biométrico se reserva al administrador.
+    if (req.usuario?.rol !== "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Solo un administrador puede registrar plantillas faciales."
+      });
+    }
+
+    const matricula = String(req.params.matricula || "").trim();
+
+    if (!matricula) {
+      return res.status(400).json({
+        success: false,
+        message: "La matrícula es obligatoria."
+      });
+    }
+
+    // Buscar alumno y referencia de su fotografía privada.
+    const alumno = await prisma.alumno.findUnique({
+      where: { matricula },
+      select: {
+        id: true,
+        matricula: true,
+        fotoKey: true
+      }
+    });
+
+    if (!alumno) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontró el alumno."
+      });
+    }
+
+    if (!alumno.fotoKey) {
+      return res.status(409).json({
+        success: false,
+        message: "El alumno todavía no tiene fotografía registrada."
+      });
+    }
+
+    // Recuperar la imagen directamente desde Backblaze B2.
+    const objeto = await r2.send(
+      new GetObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: alumno.fotoKey
+      })
+    );
+
+    if (!objeto.Body) {
+      return res.status(502).json({
+        success: false,
+        message: "No se pudo recuperar la fotografía de Backblaze."
+      });
+    }
+
+    // Convertir el contenido privado a Base64.
+    const bytes = await objeto.Body.transformToByteArray();
+
+    if (!bytes.length || bytes.length > 5 * 1024 * 1024) {
+      return res.status(422).json({
+        success: false,
+        message: "La fotografía está vacía o supera los 5 MB."
+      });
+    }
+
+    const imageBase64 = Buffer.from(bytes).toString("base64");
+
+    // Enviar al motor Python el UUID real del alumno.
+    const resultado = await enrollFace(alumno.id, imageBase64);
+
+    return res.status(200).json({
+      success: true,
+      message: "Rostro registrado correctamente.",
+      data: {
+        matricula: alumno.matricula,
+        alumnoId: resultado.alumnoId,
+        model: resultado.model,
+        enrolled: true
+      }
+    });
+
+  } catch (error) {
+    console.error("[FACIAL ENROLL] Error:", error);
+
+    const status =
+      Number(error.status) >= 400 && Number(error.status) < 600
+        ? Number(error.status)
+        : 500;
+
+    return res.status(status).json({
+      success: false,
+      message:
+        status === 500
+          ? "Error interno al registrar el rostro."
+          : error.message
+    });
+  }
 };

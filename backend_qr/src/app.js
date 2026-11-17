@@ -14,6 +14,8 @@ import reportesRoutes from "./routes/reportes.routes.js";
 import gruposRoutes from "./routes/grupos.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import fotosRoutes from "./routes/fotos.routes.js";
+import asistenciaFacialRoutes
+  from "./routes/asistencias.facial.routes.js";
 const app = express();
 
 // ======================================================
@@ -152,6 +154,7 @@ app.use("/api/stats", statsRoutes);
 app.use("/api", authenticationRoutes);
 
 app.use("/api", asistenciaRoutes);
+app.use("/api/asistencias", asistenciaFacialRoutes);
 
 app.use("/api", maestroRoutes);
 

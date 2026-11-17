@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AppState } from "react-native";
 
 // Consulta existente de consultarAsistencias. Verifica el montaje en tus rutas.
-const API_URL = "http://192.168.137.99:3000/api/asistencias";
+const API_URL = "https://pase-lista-full-26.onrender.com/api/asistencias";
 export const SCHOOL_TIME_ZONE = "America/Mexico_City";
 export type SessionState = "Sin verificar" | "Activa" | "No disponible";
 export type AttendanceMethod = "QR" | "Manual";

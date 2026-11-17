@@ -2,12 +2,11 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-
 import {
     subirFotoAlumno,
-    consultarFotoAlumno
+    consultarFotoAlumno,
+    enrolarRostroAlumno
 } from "../controllers/fotos.controllers.js";
-
 const router = Router();
 
 // ==========================================
@@ -121,4 +120,10 @@ router.get(
     consultarFotoAlumno
 );
 
+// Registrar plantilla facial utilizando la foto privada de B2.
+router.post(
+    "/:matricula/enrolamiento-facial",
+    verificarToken,
+    enrolarRostroAlumno
+);
 export default router;

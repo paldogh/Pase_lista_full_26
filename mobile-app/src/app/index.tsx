@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAttendance } from "../context/AttendanceContext";
 
 // Misma conexión directa que scanner.tsx. Ajusta ambos archivos si cambia el servidor.
-const API_URL = "http://192.168.137.99:3000/api/asistencias";
+const API_URL = "https://pase-lista-full-26.onrender.com/api/asistencias";
 const DOCENTE_ID = "maestro-001";
 
 type ManualResult = {
