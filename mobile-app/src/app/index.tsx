@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -12,7 +13,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAttendance } from "../context/AttendanceContext";
@@ -44,9 +44,15 @@ type AttendancePayload = {
 export default function HomeScreen() {
   const router = useRouter();
   const {
-    sessionState, setSessionState,
-    records, addRecord, loading: summaryLoading, error: summaryError,
-    hasLoaded, lastUpdated, refreshRecords,
+    sessionState,
+    setSessionState,
+    records,
+    addRecord,
+    loading: summaryLoading,
+    error: summaryError,
+    hasLoaded,
+    lastUpdated,
+    refreshRecords,
   } = useAttendance();
 
   const [manualVisible, setManualVisible] = useState(false);
@@ -142,7 +148,9 @@ export default function HomeScreen() {
       // Un duplicado no verifica la sesión: el backend lo comprueba antes.
       if (kind === "success") {
         setSessionState("Activa");
-      } else if (payload.message === "No hay ninguna sesión QR activa para este docente") {
+      } else if (
+        payload.message === "No hay ninguna sesión QR activa para este docente"
+      ) {
         setSessionState("No disponible");
       }
 
@@ -150,14 +158,10 @@ export default function HomeScreen() {
 
       const studentName =
         student && typeof student === "object"
-          ? [
-              student.nombre,
-              student.apellidoPaterno,
-              student.apellidoMaterno,
-            ]
+          ? [student.nombre, student.apellidoPaterno, student.apellidoMaterno]
               .filter(
                 (part): part is string =>
-                  typeof part === "string" && part.length > 0
+                  typeof part === "string" && part.length > 0,
               )
               .join(" ")
           : undefined;
@@ -205,8 +209,7 @@ export default function HomeScreen() {
   };
 
   const registered =
-    manualResult?.kind === "success" ||
-    manualResult?.kind === "duplicate";
+    manualResult?.kind === "success" || manualResult?.kind === "duplicate";
 
   const resultColor =
     manualResult?.kind === "success"
@@ -216,15 +219,15 @@ export default function HomeScreen() {
         : "#B91C1C";
 
   const totalRegistrados = records.filter(
-    (record) => record.estado === "PRESENTE" || record.estado === "RETARDO"
+    (record) => record.estado === "PRESENTE" || record.estado === "RETARDO",
   ).length;
 
   const totalPresentes = records.filter(
-    (record) => record.estado === "PRESENTE"
+    (record) => record.estado === "PRESENTE",
   ).length;
 
   const totalRetardos = records.filter(
-    (record) => record.estado === "RETARDO"
+    (record) => record.estado === "RETARDO",
   ).length;
 
   return (
@@ -238,17 +241,16 @@ export default function HomeScreen() {
           <View style={styles.session}>
             <Text style={styles.smallLabel}>Modalidad de registro</Text>
             <Text style={styles.sessionTitle}>Entrada escolar</Text>
-            <Text style={[styles.smallLabel, { marginTop: 8 }]}>Estado de sesión: {sessionState}</Text>
+            <Text style={[styles.smallLabel, { marginTop: 8 }]}>
+              Estado de sesión: {sessionState}
+            </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Abrir cámara para escanear el código QR del alumno"
             onPress={() => router.push("/scanner")}
-            style={({ pressed }) => [
-              styles.scanner,
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.scanner, pressed && styles.pressed]}
           >
             <View style={styles.qrMark} accessible={false}>
               <View style={[styles.corner, styles.topLeft]} />
@@ -258,17 +260,28 @@ export default function HomeScreen() {
               <Text style={styles.qrText}>QR</Text>
             </View>
 
-            <Text style={styles.scanTitle}>
-              Escanea el código del alumno
-            </Text>
+            <Text style={styles.scanTitle}>Escanea el código del alumno</Text>
 
-            <Text style={styles.scanHint}>
-              El QR debe ser único por alumno
-            </Text>
+            <Text style={styles.scanHint}>El QR debe ser único por alumno</Text>
 
-            <Text style={styles.scanAction}>
-              Toca para abrir la cámara
+            <Text style={styles.scanAction}>Toca para abrir la cámara</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Abrir reconocimiento facial para registrar asistencia"
+            onPress={() => router.push("/facial-scanner")}
+            style={({ pressed }) => [
+              styles.facialButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.facialTitle}>◎ Reconocimiento facial</Text>
+            <Text style={styles.facialDescription}>
+              Identificar al alumno con la cámara frontal y registrar su
+              asistencia.
             </Text>
+            <Text style={styles.facialAction}>INICIAR RECONOCIMIENTO →</Text>
           </Pressable>
 
           <Pressable
@@ -279,9 +292,7 @@ export default function HomeScreen() {
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.manualText}>
-              Ingresar matrícula manual
-            </Text>
+            <Text style={styles.manualText}>Ingresar matrícula manual</Text>
           </Pressable>
 
           <View style={styles.stats}>
@@ -312,16 +323,32 @@ export default function HomeScreen() {
           </View>
 
           <Text style={styles.summaryNote}>
-            {summaryLoading ? "Actualizando resumen…"
-              : lastUpdated ? `Datos del día · Actualizado a las ${lastUpdated}`
-              : "Resumen sin consultar"}
+            {summaryLoading
+              ? "Actualizando resumen…"
+              : lastUpdated
+                ? `Datos del día · Actualizado a las ${lastUpdated}`
+                : "Resumen sin consultar"}
           </Text>
-          {!!summaryError && <Text accessibilityLiveRegion="polite" style={styles.summaryError}>{summaryError}</Text>}
-          <Pressable accessibilityRole="button" disabled={summaryLoading}
-            accessibilityState={{ disabled: summaryLoading, busy: summaryLoading }}
-            onPress={() => { void refreshRecords(); }}
-            style={[styles.manualButton, summaryLoading && styles.pressed]}>
-            <Text style={styles.manualText}>{summaryLoading ? "Actualizando…" : "Actualizar resumen"}</Text>
+          {!!summaryError && (
+            <Text accessibilityLiveRegion="polite" style={styles.summaryError}>
+              {summaryError}
+            </Text>
+          )}
+          <Pressable
+            accessibilityRole="button"
+            disabled={summaryLoading}
+            accessibilityState={{
+              disabled: summaryLoading,
+              busy: summaryLoading,
+            }}
+            onPress={() => {
+              void refreshRecords();
+            }}
+            style={[styles.manualButton, summaryLoading && styles.pressed]}
+          >
+            <Text style={styles.manualText}>
+              {summaryLoading ? "Actualizando…" : "Actualizar resumen"}
+            </Text>
           </Pressable>
 
           <View style={styles.history}>
@@ -330,7 +357,9 @@ export default function HomeScreen() {
             {records.length === 0 ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyTitle}>
-                  {hasLoaded ? "Aún no hay asistencias hoy" : "Esperando la consulta de asistencias"}
+                  {hasLoaded
+                    ? "Aún no hay asistencias hoy"
+                    : "Esperando la consulta de asistencias"}
                 </Text>
 
                 <Text style={styles.emptyText}>
@@ -342,9 +371,7 @@ export default function HomeScreen() {
                 <View key={record.id} style={styles.historyItem}>
                   <View style={styles.historyHeader}>
                     <View style={styles.historyStudent}>
-                      <Text style={styles.historyName}>
-                        {record.nombre}
-                      </Text>
+                      <Text style={styles.historyName}>{record.nombre}</Text>
 
                       <Text style={styles.historyMatricula}>
                         {record.matricula}
@@ -357,22 +384,33 @@ export default function HomeScreen() {
                         styles.historyStatus,
                         {
                           color:
-                            record.estado === "RETARDO" ? "#B45309"
-                              : record.estado === "FALTA" ? "#B91C1C"
-                              : record.estado === "JUSTIFICADA" ? "#2563EB" : "#15803D",
+                            record.estado === "RETARDO"
+                              ? "#B45309"
+                              : record.estado === "FALTA"
+                                ? "#B91C1C"
+                                : record.estado === "JUSTIFICADA"
+                                  ? "#2563EB"
+                                  : "#15803D",
                         },
                       ]}
                     >
-                      {{ PRESENTE: "Presente", RETARDO: "Retardo", JUSTIFICADA: "Justificada", FALTA: "Falta" }[record.estado]}
+                      {
+                        {
+                          PRESENTE: "Presente",
+                          RETARDO: "Retardo",
+                          JUSTIFICADA: "Justificada",
+                          FALTA: "Falta",
+                        }[record.estado]
+                      }
                     </Text>
                   </View>
 
                   <View style={styles.historyDetails}>
-                    <Text style={styles.historyDetail}>
-                      {record.hora}
-                    </Text>
+                    <Text style={styles.historyDetail}>{record.hora}</Text>
 
-                    {!!record.metodo && <Text style={styles.historyMethod}>{record.metodo}</Text>}
+                    {!!record.metodo && (
+                      <Text style={styles.historyMethod}>{record.metodo}</Text>
+                    )}
                   </View>
                 </View>
               ))
@@ -396,8 +434,7 @@ export default function HomeScreen() {
               <Text style={styles.historyTitle}>Captura manual</Text>
 
               <Text style={styles.dialogDescription}>
-                Escribe la matrícula del alumno cuando no puedas
-                escanear su QR.
+                Escribe la matrícula del alumno cuando no puedas escanear su QR.
               </Text>
 
               <Text style={styles.inputLabel}>Matrícula</Text>
@@ -423,16 +460,8 @@ export default function HomeScreen() {
               />
 
               {manualResult && (
-                <View
-                  style={styles.resultBox}
-                  accessibilityLiveRegion="polite"
-                >
-                  <Text
-                    style={[
-                      styles.resultHeading,
-                      { color: resultColor },
-                    ]}
-                  >
+                <View style={styles.resultBox} accessibilityLiveRegion="polite">
+                  <Text style={[styles.resultHeading, { color: resultColor }]}>
                     {manualResult.kind === "success"
                       ? "Asistencia registrada"
                       : manualResult.kind === "duplicate"
@@ -445,9 +474,7 @@ export default function HomeScreen() {
                   </Text>
 
                   {!!manualResult.name && (
-                    <Text style={styles.studentName}>
-                      {manualResult.name}
-                    </Text>
+                    <Text style={styles.studentName}>{manualResult.name}</Text>
                   )}
 
                   {!!manualResult.group && (
@@ -459,13 +486,10 @@ export default function HomeScreen() {
               )}
 
               <Pressable
-                disabled={
-                  loading || (!registered && !matricula.trim())
-                }
+                disabled={loading || (!registered && !matricula.trim())}
                 accessibilityRole="button"
                 accessibilityState={{
-                  disabled:
-                    loading || (!registered && !matricula.trim()),
+                  disabled: loading || (!registered && !matricula.trim()),
                   busy: loading,
                 }}
                 onPress={() => {
@@ -478,8 +502,7 @@ export default function HomeScreen() {
                 }}
                 style={({ pressed }) => [
                   styles.submitButton,
-                  (loading ||
-                    (!registered && !matricula.trim())) &&
+                  (loading || (!registered && !matricula.trim())) &&
                     styles.submitDisabled,
                   pressed && styles.pressed,
                 ]}
@@ -521,8 +544,42 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  summaryNote: { color: "#64748B", fontSize: 12, lineHeight: 18, marginTop: 12 },
-  summaryError: { color: "#B91C1C", fontSize: 12, lineHeight: 18, marginTop: 8 },
+  facialButton: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+    borderWidth: 1,
+    borderRadius: 17,
+    minHeight: 112,
+    marginTop: 12,
+    padding: 16,
+    justifyContent: "center",
+  },
+  facialTitle: { color: "#065F46", fontSize: 16, fontWeight: "800" },
+  facialDescription: {
+    color: "#475569",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+  },
+  facialAction: {
+    color: "#047857",
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 10,
+    letterSpacing: 0.4,
+  },
+  summaryNote: {
+    color: "#64748B",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 12,
+  },
+  summaryError: {
+    color: "#B91C1C",
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 8,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: "#EDF3FB",

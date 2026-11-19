@@ -1,20 +1,25 @@
-export type FacialStudent = {
-  id?: string;
-  matricula?: string;
-  nombre?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
-  grupo?: string | null;
-};
-
 export type FacialAttendanceResponse = {
   success: boolean;
-  message: string;
-  alumno?: FacialStudent;
-  confidence?: number;
-  attendance?: {
+  message?: string;
+  alumno?: {
     id?: string;
-    estado?: "PRESENTE" | "RETARDO";
-    fechaHora?: string;
+    matricula?: string;
+    nombre?: string;
+    apellidos?: string;
   };
+  student?: {
+    id?: string;
+    matricula?: string;
+    nombre?: string;
+    apellidos?: string;
+  };
+  asistencia?: {
+    id?: string;
+    fecha?: string;
+    hora?: string;
+    estado?: string;
+  };
+  distance?: number;
+  model?: string;
+  [key: string]: unknown;
 };
