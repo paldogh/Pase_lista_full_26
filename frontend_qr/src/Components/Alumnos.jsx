@@ -70,8 +70,8 @@ function Alumnos() {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: { ideal: "environment" },
-                        width: { ideal: 1280 },
-                        height: { ideal: 960 }
+                        width: { ideal: 960 },
+                        height: { ideal: 720 }
                     },
                     audio: false
                 });
@@ -260,13 +260,22 @@ function Alumnos() {
 
         setCapturandoFoto(true);
         try {
+            // Reducir la fotografía a un tamaño práctico para el enrolamiento facial.
+            // Se conserva el encuadre completo y la proporción original de la cámara.
+            const MAX_DIMENSION = 960;
+            const factor = Math.min(1, MAX_DIMENSION / Math.max(video.videoWidth, video.videoHeight));
+            const ancho = Math.round(video.videoWidth * factor);
+            const alto = Math.round(video.videoHeight * factor);
+
             const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext("2d");
+            canvas.width = ancho;
+            canvas.height = alto;
+            const context = canvas.getContext("2d", { alpha: false });
             if (!context) throw new Error("No fue posible procesar la imagen.");
 
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = "high";
+            context.drawImage(video, 0, 0, ancho, alto);
 
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(
@@ -1045,18 +1054,26 @@ const confirmarImportacionMasiva = async () => {
                                     <p className="mt-2 text-xs text-rose-700">Comprueba los permisos del navegador y vuelve a intentarlo.</p>
                                 </div>
                             ) : (
-                                <div className="overflow-hidden rounded-xl bg-slate-950">
+                                <div className="relative mx-auto aspect-[4/3] w-full max-h-[52vh] overflow-hidden rounded-xl bg-slate-950">
                                     <video
                                         ref={videoRef}
                                         autoPlay
                                         playsInline
                                         muted
-                                        className="block max-h-[62vh] min-h-[240px] w-full object-contain"
+                                        className="absolute inset-0 h-full w-full object-contain"
                                     />
+                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                        <div className="h-[68%] w-[48%] rounded-[50%] border-2 border-dashed border-emerald-300/90 shadow-[0_0_0_999px_rgba(2,6,23,0.16)]" />
+                                    </div>
+                                    <div className="pointer-events-none absolute bottom-2 left-0 right-0 text-center">
+                                        <span className="rounded-full bg-slate-950/65 px-3 py-1 text-[11px] font-medium text-white">
+                                            Centra el rostro dentro del óvalo
+                                        </span>
+                                    </div>
                                 </div>
                             )}
                             <p className="text-xs leading-5 text-slate-500">
-                                Coloca al alumno frente a la cámara, con el rostro iluminado y centrado. La imagen se enviará al almacenamiento privado del expediente.
+                                Coloca al alumno de frente, con buena iluminación y sin inclinar la cabeza. Asegúrate de que el rostro completo quede dentro del óvalo; evita capturar hombros, techo o fondo sin la cara.
                             </p>
                         </div>
 
