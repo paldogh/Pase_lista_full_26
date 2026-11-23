@@ -691,68 +691,9 @@ const confirmarImportacionMasiva = async () => {
                     <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{alumnosFiltrados.length} de {alumnos.length} alumnos</span>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-[1050px] w-full">
+                <table className="min-w-[1050px] w-full">
                     <thead className="bg-slate-50">
                         <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    <input
-                        type="file"
-                        ref={inputFileRef}
-                        onChange={manejarSeleccionArchivo}
-                        accept=".csv, .xlsx, .xls"
-                        className="hidden"
-                    />
-
-                    <button
-                        onClick={() => inputFileRef.current?.click()}
-                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 shadow-sm transition cursor-pointer"
-                    >
-                        <Upload size={18} />
-                        Importar Excel/CSV
-                    </button>
-
-                    <button
-                        onClick={abrirModalCrear}
-                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition cursor-pointer"
-                    >
-                        <Plus size={18} />
-                        Agregar Alumno
-                    </button>
-                </div>
-            </div>
-
-            <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div className="flex items-center bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 w-full max-w-md">
-                    <Search size={20} className="text-gray-400 mr-2" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por matrícula, nombre o correo..."
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        className="w-full outline-none text-sm text-slate-700 bg-transparent"
-                    />
-                </div>
-
-                <div className="flex items-center bg-white border border-gray-300 rounded-lg shadow-sm px-3 py-2 w-full sm:w-72">
-                    <Filter size={18} className="text-gray-400 mr-2" />
-                    <select
-                        value={filtroGrupo}
-                        onChange={(e) => setFiltroGrupo(e.target.value)}
-                        className="w-full outline-none text-sm text-slate-700 bg-transparent cursor-pointer"
-                    >
-                        <option value="">Todos los grupos</option>
-                        {grupos.map((g) => (
-                            <option key={g.id} value={g.id}>
-                                {g.nombre} ({g.id})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg overflow-x-auto w-full">
-                <table className="min-w-[900px] w-full">
-                    <thead className="bg-slate-200">
-                        <tr>
                             <th className="px-4 py-4 text-center">Foto</th>
                             <th className="px-4 py-4 text-left">Matrícula</th>
                             <th className="px-4 py-4 text-left">Nombre</th>
