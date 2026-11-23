@@ -1197,7 +1197,7 @@ const confirmarImportacionMasiva = async () => {
                     </div>
                 </div>
             )}
-        </div>
+        </main>
     );
 }
 
