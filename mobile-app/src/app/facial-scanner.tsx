@@ -49,7 +49,7 @@ const FACE_REQUIREMENTS: FaceRequirements = {
 
   eyesOpen: true,
 
-  stableFor: 700,
+  stableFor: 500,
 };
 
 // Mensajes que verá el alumno.
@@ -68,6 +68,36 @@ const FACE_HINTS: Partial<Record<GuidanceStatus, string>> = {
 // ------------------------------------------------------
 
 type ResultState = "success" | "duplicate" | "not-found" | "error";
+
+// Patrones hápticos: no requieren módulos nativos adicionales.
+const VIBRATION_PATTERNS = {
+  success: [0, 100, 70, 100],       // dos pulsos cortos
+  duplicate: [0, 220],              // un pulso medio
+  notFound: [0, 70, 60, 70],         // dos pulsos breves
+  error: [0, 250, 100, 250],         // dos pulsos largos
+};
+
+const vibrateForResult = (state: ResultState) => {
+  try {
+    switch (state) {
+      case "success":
+        Vibration.vibrate(VIBRATION_PATTERNS.success);
+        break;
+      case "duplicate":
+        Vibration.vibrate(VIBRATION_PATTERNS.duplicate);
+        break;
+      case "not-found":
+        Vibration.vibrate(VIBRATION_PATTERNS.notFound);
+        break;
+      case "error":
+        Vibration.vibrate(VIBRATION_PATTERNS.error);
+        break;
+    }
+  } catch (vibrationError) {
+    // La vibración es complementaria; nunca debe impedir el registro.
+    console.warn("[FACIAL] No se pudo ejecutar la vibración:", vibrationError);
+  }
+};
 
 type Student = {
   nombre?: string;
@@ -105,6 +135,7 @@ export default function FacialScannerScreen() {
   const [result, setResult] = useState<AttendanceResult | null>(null);
   const [permissionError, setPermissionError] = useState("");
   const [cameraActive, setCameraActive] = useState(true);
+  const [cameraInstanceKey, setCameraInstanceKey] = useState(0);
 
   const busy = useRef(false);
   const mounted = useRef(true);
@@ -205,6 +236,7 @@ const valid = validation?.valid ?? false;
       }, 210000);
 
       try {
+        const captureStartedAt = Date.now();
         console.log("[FACIAL] Fotografía capturada automáticamente");
 
         // 1. Comprimir y redimensionar.
@@ -229,6 +261,12 @@ const valid = validation?.valid ?? false;
         }
 
         console.log(
+          "[FACIAL PERFORMANCE] Compresión:",
+          Date.now() - captureStartedAt,
+          "ms"
+        );
+
+        console.log(
           "[FACIAL] Imagen preparada:",
           compressed.width,
           "x",
@@ -242,9 +280,21 @@ const valid = validation?.valid ?? false;
         );
 
         // 2. Enviar al backend existente.
+        const requestStartedAt = Date.now();
         const payload = await registerFacialAttendance(
           compressed.base64,
           controller.signal
+        );
+
+        console.log(
+          "[FACIAL PERFORMANCE] Backend + motor facial:",
+          Date.now() - requestStartedAt,
+          "ms"
+        );
+        console.log(
+          "[FACIAL PERFORMANCE] Captura a respuesta total:",
+          Date.now() - captureStartedAt,
+          "ms"
         );
 
         if (!mounted.current) return;
@@ -265,9 +315,7 @@ const valid = validation?.valid ?? false;
         // 3. Mostrar el resultado confirmado por el backend.
         setResult({
           state: "success",
-          message:
-            payload.message ||
-            "Identidad confirmada y asistencia registrada.",
+          message: "Tu asistencia se registró correctamente.",
           name: name || student?.matricula,
           group: student?.grupo || undefined,
           time: getCurrentTime(),
@@ -275,15 +323,14 @@ const valid = validation?.valid ?? false;
 
         // 4. Actualizar el resumen de asistencias.
         addRecord();
-
-        Vibration.vibrate(180);
+        vibrateForResult("success");
 
         console.log("[FACIAL] Asistencia registrada correctamente");
 
       } catch (error) {
         if (!mounted.current) return;
 
-        console.error("[FACIAL] Error:", error);
+        console.log("[FACIAL] Resultado controlado:", error instanceof FacialApiError ? { status: error.status, message: error.message } : String(error));
 
         if (
           error instanceof FacialApiError &&
@@ -291,9 +338,10 @@ const valid = validation?.valid ?? false;
         ) {
           setResult({
             state: "duplicate",
-            message: error.message,
+            message: "Tu asistencia de hoy ya se encuentra registrada. No necesitas volver a intentarlo.",
             time: getCurrentTime(),
           });
+          vibrateForResult("duplicate");
 
         } else if (
           error instanceof FacialApiError &&
@@ -301,22 +349,22 @@ const valid = validation?.valid ?? false;
         ) {
           setResult({
             state: "not-found",
-            message:
-              error.message ||
-              "No se encontró una coincidencia suficiente.",
+            message: "No pudimos identificar tu rostro. Colócate frente a la cámara e inténtalo nuevamente.",
             time: getCurrentTime(),
           });
+          vibrateForResult("not-found");
 
         } else {
           setResult({
             state: "error",
             message: controller.signal.aborted
-              ? "El servidor tardó demasiado. Verifica si la asistencia se guardó antes de volver a intentar."
-              : error instanceof Error
-                ? error.message
-                : "No fue posible completar el reconocimiento.",
+              ? "El servicio está tardando más de lo esperado. Espera un momento y verifica tu asistencia antes de intentarlo de nuevo."
+              : error instanceof FacialApiError
+                ? "No fue posible completar el registro en este momento. Inténtalo nuevamente o utiliza el código QR."
+                : "Ocurrió un problema de conexión. Verifica tu conexión e inténtalo nuevamente.",
             time: getCurrentTime(),
           });
+          vibrateForResult("error");
         }
 
       } finally {
@@ -333,7 +381,33 @@ const valid = validation?.valid ?? false;
   );
 
   // ----------------------------------------------------
-  // REINTENTAR CON EL SIGUIENTE ALUMNO
+  // REINICIO AUTOMÁTICO DEL ESCÁNER
+  // ----------------------------------------------------
+  // Al terminar la respuesta del servidor, mostramos el resultado brevemente.
+  // Después desmontamos y montamos FaceCamera de nuevo para reiniciar también
+  // el estado interno de autoCapture/continuous de la librería facial.
+
+  useEffect(() => {
+    if (!result || loading || !appActive) return;
+
+    const delay = result.state === "success" ? 800 : 1200;
+
+    const timer = setTimeout(() => {
+      if (!mounted.current || busy.current) return;
+
+      lastFaceCount.current = null;
+      setResult(null);
+      setCameraActive(true);
+      setCameraInstanceKey((current) => current + 1);
+
+      console.log("[FACIAL] Escáner reiniciado. Buscando al siguiente alumno.");
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [result, loading, appActive]);
+
+  // ----------------------------------------------------
+  // REINTENTAR MANUALMENTE
   // ----------------------------------------------------
 
   const identifyNext = () => {
@@ -494,11 +568,12 @@ const valid = validation?.valid ?? false;
             ) : appActive && cameraActive && !result && !loading ? (
               <>
                 <FaceCamera
+                  key={cameraInstanceKey}
                   camera={camera}
                   style={StyleSheet.absoluteFill}
                   facing="front"
                   active={true}
-                  inferenceFps={12}
+                  inferenceFps={15}
                   detection={{
                     performanceMode: "fast",
                     landmarks: true,
@@ -506,14 +581,14 @@ const valid = validation?.valid ?? false;
                   autoCapture
                   continuous
                   requirements={FACE_REQUIREMENTS}
-                  stableFor={700}
+                  stableFor={500}
                   countdown={0}
-                  cooldown={1200}
+                  cooldown={700}
                   onCameraReady={(info) => {
                     console.log("[FACIAL DEBUG] Cámara lista:", info?.frame);
                   }}
                   onCameraError={(error) => {
-                    console.error("[FACIAL DEBUG] Error de cámara:", error);
+                    console.log("[FACIAL DEBUG] Error de cámara:", error);
                   }}
                   onFrame={(frame) => {
                     const count = frame?.faces?.length ?? 0;
@@ -533,7 +608,7 @@ const valid = validation?.valid ?? false;
                     console.log("[FACIAL DEBUG] AutoCapture:", state);
                   }}
                   onCaptureError={(error) => {
-                    console.error("[FACIAL DEBUG] Error de captura:", error);
+                    console.log("[FACIAL DEBUG] Error de captura:", error);
                   }}
                   onCapture={handleCapture}
                 />
@@ -615,7 +690,7 @@ const valid = validation?.valid ?? false;
               {loading
                 ? "Verificando con el servidor..."
                 : result
-                  ? "Detección pausada"
+                  ? "Mostrando resultado..."
                   : permission?.granted
                     ? faceHint
                     : "Esperando permiso de cámara"}
@@ -682,12 +757,16 @@ const valid = validation?.valid ?? false;
               Hora de respuesta: {result.time}
             </Text>
 
+            <Text style={styles.resultMessage}>
+              La cámara continuará automáticamente en unos segundos.
+            </Text>
+
             <Pressable
               style={styles.primaryButton}
               onPress={identifyNext}
             >
               <Text style={styles.primaryButtonText}>
-                Identificar siguiente alumno →
+                Continuar ahora →
               </Text>
             </Pressable>
           </View>

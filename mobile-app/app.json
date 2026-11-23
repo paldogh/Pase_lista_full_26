@@ -25,7 +25,7 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
-      "package": "com.anonymous.mobileapp"
+      "package": "com.paldogh.mobileapp"
     },
     "web": {
       "output": "static",
@@ -52,11 +52,22 @@
       "expo-status-bar",
       "expo-web-browser",
       "expo-asset",
-      "@rbayuokt/expo-face-vision"
+      [
+        "@rbayuokt/expo-face-vision",
+        {
+          "cameraPermission": "PaseLista Smart necesita la cámara para detectar el rostro y registrar la asistencia."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7696394d-b37e-433b-ac8e-4100ea798cc2"
+      }
     }
   }
 }
