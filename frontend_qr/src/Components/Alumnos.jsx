@@ -569,22 +569,23 @@ const confirmarImportacionMasiva = async () => {
     });
 
     return (
-        <div className="mx-auto w-full max-w-[1600px] space-y-6 px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
-            {/* Encabezado ejecutivo: presentación visual, conserva las acciones existentes */}
-            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-[#451326] p-5 text-white shadow-lg sm:p-7">
-                <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-rose-700/20 blur-3xl" />
-                <div className="relative flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
+        <main className="mx-auto w-full max-w-[1680px] space-y-5 px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
+            {/* Encabezado ejecutivo */}
+            <section className="relative isolate overflow-hidden rounded-[26px] bg-[#4b1028] px-5 py-6 text-white shadow-[0_18px_50px_-24px_rgba(75,16,40,.65)] sm:px-7 sm:py-7">
+                <div className="pointer-events-none absolute -right-12 -top-24 h-72 w-72 rounded-full bg-rose-400/10 blur-3xl" />
+                <div className="pointer-events-none absolute bottom-[-100px] right-[22%] h-56 w-56 rounded-full bg-amber-300/10 blur-3xl" />
+                <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                     <div className="max-w-2xl">
-                        <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-rose-200">
-                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.18em] text-rose-100">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                             CECyTE Hidalgo · Control escolar
                         </div>
                         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Directorio de alumnos</h1>
-                        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
-                            Administración del padrón estudiantil, expedientes digitales e identificación para el control de acceso y asistencia.
+                        <p className="mt-2 max-w-xl text-sm leading-6 text-rose-100/75">
+                            Consulta y administra el padrón estudiantil, los expedientes digitales y la identificación facial.
                         </p>
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                         <input
                             type="file"
                             ref={inputFileRef}
@@ -593,14 +594,16 @@ const confirmarImportacionMasiva = async () => {
                             className="hidden"
                         />
                         <button
+                            type="button"
                             onClick={() => inputFileRef.current?.click()}
                             className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
                         >
                             <Upload size={17} /> Importar Excel/CSV
                         </button>
                         <button
+                            type="button"
                             onClick={abrirModalCrear}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-rose-600"
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#4b1028] shadow-sm transition hover:bg-rose-50"
                         >
                             <Plus size={18} /> Agregar alumno
                         </button>
@@ -608,198 +611,181 @@ const confirmarImportacionMasiva = async () => {
                 </div>
             </section>
 
-            {/* Indicadores descriptivos calculados con el padrón cargado */}
+            {/* Indicadores derivados de los datos reales ya cargados */}
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-500">Matrícula registrada</p>
+                        <p className="text-xs font-semibold text-slate-500">Alumnos registrados</p>
                         <span className="rounded-xl bg-slate-100 p-2 text-slate-600"><UserRound size={17}/></span>
                     </div>
                     <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">{alumnos.length.toLocaleString("es-MX")}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Alumnos en el padrón</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Padrón estudiantil</p>
                 </article>
-                <article className="rounded-2xl border border-rose-100 bg-white p-4 shadow-sm sm:p-5">
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-500">Grupos disponibles</p>
+                        <p className="text-xs font-semibold text-slate-500">Grupos</p>
                         <span className="rounded-xl bg-rose-50 p-2 text-rose-700"><Filter size={17}/></span>
                     </div>
-                    <p className="mt-3 text-3xl font-bold tracking-tight text-rose-800 tabular-nums">{grupos.length.toLocaleString("es-MX")}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Grupos en el catálogo</p>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-[#8b1e43] tabular-nums">{grupos.length.toLocaleString("es-MX")}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">En el catálogo escolar</p>
                 </article>
-                <article className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-semibold text-slate-500">Con fotografía</p>
                         <span className="rounded-xl bg-emerald-50 p-2 text-emerald-700"><Camera size={17}/></span>
                     </div>
                     <p className="mt-3 text-3xl font-bold tracking-tight text-emerald-700 tabular-nums">{alumnos.filter(a => !!a.fotoKey).length.toLocaleString("es-MX")}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Expedientes con foto registrada</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Expedientes con foto</p>
                 </article>
-                <article className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+                <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-500">Resultados actuales</p>
+                        <p className="text-xs font-semibold text-slate-500">En consulta</p>
                         <span className="rounded-xl bg-sky-50 p-2 text-sky-700"><Search size={17}/></span>
                     </div>
                     <p className="mt-3 text-3xl font-bold tracking-tight text-sky-700 tabular-nums">{alumnosFiltrados.length.toLocaleString("es-MX")}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Coincidencias con los filtros</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Resultados del filtro actual</p>
                 </article>
             </section>
 
-            {/* Búsqueda y filtros */}
+            {/* Consulta */}
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-[.17em] text-slate-400">Consulta del padrón</p>
                         <h2 className="mt-1 text-base font-bold text-slate-900">Buscar y filtrar estudiantes</h2>
                     </div>
-                    <p className="text-xs text-slate-400">Localiza expedientes por matrícula, nombre, correo o grupo</p>
+                    <p className="text-xs text-slate-400">Por matrícula, nombre, correo o grupo</p>
                 </div>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition focus-within:border-rose-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-rose-500/10 sm:max-w-xl">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_260px]">
+                    <div className="flex min-w-0 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition focus-within:border-rose-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-rose-500/10">
                         <Search size={18} className="mr-2 shrink-0 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Buscar por matrícula, nombre o correo..."
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
-                            className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                            className="w-full min-w-0 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
                         />
                     </div>
-                    <div className="flex w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 sm:max-w-xs">
+                    <div className="flex min-w-0 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
                         <Filter size={17} className="mr-2 shrink-0 text-slate-400" />
                         <select
                             value={filtroGrupo}
                             onChange={(e) => setFiltroGrupo(e.target.value)}
-                            className="w-full cursor-pointer bg-transparent text-sm text-slate-700 outline-none"
+                            className="w-full min-w-0 cursor-pointer bg-transparent text-sm text-slate-700 outline-none"
                         >
                             <option value="">Todos los grupos</option>
                             {grupos.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                    {g.nombre} ({g.id})
-                                </option>
+                                <option key={g.id} value={g.id}>{g.nombre} ({g.id})</option>
                             ))}
                         </select>
                     </div>
                 </div>
             </section>
 
+            {/* Tabla ejecutiva para escritorio */}
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex flex-col justify-between gap-2 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+                <div className="flex flex-col gap-2 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Base de datos escolar</p>
                         <h2 className="mt-1 text-base font-bold text-slate-900">Alumnos registrados</h2>
                     </div>
                     <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{alumnosFiltrados.length} de {alumnos.length} alumnos</span>
                 </div>
-                <div className="overflow-x-auto">
-                <table className="min-w-[1050px] w-full">
-                    <thead className="bg-slate-50">
-                        <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                            <th className="px-4 py-4 text-center">Foto</th>
-                            <th className="px-4 py-4 text-left">Matrícula</th>
-                            <th className="px-4 py-4 text-left">Nombre</th>
-                            <th className="px-4 py-4 text-left">Apellidos</th>
-                            <th className="px-4 py-4 text-left">Correo</th>
-                            <th className="px-4 py-4 text-left">Teléfono</th>
-                            <th className="px-4 py-4 text-left">Grupo</th>
-                            <th className="px-4 py-4 text-center">Identificación</th>
-                            <th className="px-4 py-4 text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {alumnosFiltrados.length === 0 ? (
-                            <tr>
-                                <td colSpan="9" className="px-4 py-16 text-center text-sm text-slate-500">
-                                    No se encontraron alumnos registrados con esos criterios.
-                                </td>
+
+                <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[1120px] text-left">
+                        <thead className="bg-slate-50">
+                            <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                <th className="px-4 py-3 text-center">Foto</th>
+                                <th className="px-4 py-3">Matrícula</th>
+                                <th className="px-4 py-3">Alumno</th>
+                                <th className="px-4 py-3">Correo / teléfono</th>
+                                <th className="px-4 py-3">Grupo</th>
+                                <th className="px-4 py-3">Identificación</th>
+                                <th className="px-4 py-3 text-center">Acciones</th>
                             </tr>
-                        ) : (
-                            alumnosFiltrados.map((a) => (
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {alumnosFiltrados.length === 0 ? (
+                                <tr><td colSpan="7" className="px-4 py-16 text-center text-sm text-slate-500">No se encontraron alumnos con esos criterios.</td></tr>
+                            ) : alumnosFiltrados.map((a) => (
                                 <tr key={a.matricula || a.id} className="transition-colors hover:bg-rose-50/30">
                                     <td className="px-4 py-3 text-center">
-                                        <button type="button" onClick={() => consultarFoto(a)} title="Ver fotografía" className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500 hover:ring-2 hover:ring-blue-300">
-                                            {fotoUrls[a.matricula]?.url ? <img src={fotoUrls[a.matricula].url} alt={`Foto ${a.nombre}`} className="h-full w-full object-cover" /> : cargandoFoto[a.matricula] ? <span className="text-[10px]">...</span> : <UserRound size={20} />}
+                                        <button type="button" onClick={() => consultarFoto(a)} title="Ver fotografía" className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500 hover:ring-2 hover:ring-rose-200">
+                                            {fotoUrls[a.matricula]?.url ? <img src={fotoUrls[a.matricula].url} alt={`Foto ${a.nombre}`} className="h-full w-full object-cover" /> : cargandoFoto[a.matricula] ? <span className="text-[10px]">...</span> : <UserRound size={19} />}
                                         </button>
                                     </td>
-                                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{a.matricula}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{a.nombre}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{`${a.apellidoPaterno || ''} ${a.apellidoMaterno || ''}`}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{a.correo || a.correoElectronico}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{a.telefono}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-600">{a.Grupo?.nombre || a.grupoId}</td>
-                                    
-                                    <td className="px-4 py-3 text-center">
-                                        <div className="flex flex-col items-center gap-1">
-                                            <button onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 text-xs font-medium" title="Ver Código QR"><QrCode size={14} /> QR</button>
-                                            <div className="flex flex-wrap items-center justify-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => abrirCamara(a)}
-                                                    disabled={!!subiendoFoto[a.matricula]}
-                                                    className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    title="Tomar fotografía con la cámara"
-                                                >
-                                                    <Camera size={14} /> Cámara
-                                                </button>
-                                                <label className="inline-flex cursor-pointer items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-                                                    <Upload size={13} /> Archivo
-                                                    <input
-                                                        type="file"
-                                                        accept="image/jpeg,image/png,image/webp"
-                                                        className="hidden"
-                                                        disabled={!!subiendoFoto[a.matricula]}
-                                                        onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }}
-                                                    />
-                                                </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => enrolarRostro(a)}
-                                                    disabled={
-                                                        !a.fotoKey ||
-                                                        !!enrolandoRostro[a.matricula] ||
-                                                        !!subiendoFoto[a.matricula]
-                                                    }
-                                                    className="
-                                                        inline-flex items-center gap-1
-                                                        rounded-full px-2.5 py-1.5
-                                                        text-xs font-semibold
-                                                        bg-violet-50 text-violet-800
-                                                        hover:bg-violet-100
-                                                        disabled:opacity-50
-                                                        disabled:cursor-not-allowed
-                                                    "
-                                                    title="Registrar plantilla facial del alumno"
-                                                >
-                                                    <Fingerprint size={14} />
-                                                    {enrolandoRostro[a.matricula]
-                                                        ? "Enrolando..."
-                                                        : "Enrolar rostro"}
-                                                </button>
-                                            </div>
-                                            {subiendoFoto[a.matricula] && <span className="text-[10px] text-emerald-700">Guardando foto...</span>}
+                                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-semibold text-slate-700">{a.matricula}</td>
+                                    <td className="px-4 py-3">
+                                        <p className="text-sm font-semibold text-slate-800">{a.nombre} {a.apellidoPaterno || ""} {a.apellidoMaterno || ""}</p>
+                                        <p className="mt-0.5 text-[11px] text-slate-400">Expediente estudiantil</p>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <p className="max-w-[230px] truncate text-xs text-slate-700">{a.correo || a.correoElectronico || "Sin correo"}</p>
+                                        <p className="mt-1 text-xs text-slate-400">{a.telefono || "Sin teléfono"}</p>
+                                    </td>
+                                    <td className="px-4 py-3"><span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">{a.Grupo?.nombre || a.grupoId}</span></td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <button type="button" onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100" title="Ver Código QR"><QrCode size={14}/> QR</button>
+                                            <button type="button" onClick={() => abrirCamara(a)} disabled={!!subiendoFoto[a.matricula]} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50" title="Tomar fotografía"><Camera size={14}/> Cámara</button>
+                                            <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                                                <Upload size={13}/> Archivo
+                                                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!subiendoFoto[a.matricula]} onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }} />
+                                            </label>
+                                            <button type="button" onClick={() => enrolarRostro(a)} disabled={!a.fotoKey || !!enrolandoRostro[a.matricula] || !!subiendoFoto[a.matricula]} className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-800 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40" title="Registrar plantilla facial"><Fingerprint size={14}/>{enrolandoRostro[a.matricula] ? "Enrolando..." : "Enrolar"}</button>
+                                        </div>
+                                        {subiendoFoto[a.matricula] && <p className="mt-1 text-[10px] text-emerald-700">Guardando fotografía...</p>}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button type="button" onClick={() => abrirModalEditar(a)} className="rounded-lg bg-amber-50 p-2 text-amber-700 transition hover:bg-amber-100" title="Editar alumno"><Edit size={16}/></button>
+                                            <button type="button" onClick={() => eliminarAlumno(a.matricula || a.id)} className="rounded-lg bg-rose-50 p-2 text-rose-700 transition hover:bg-rose-100" title="Eliminar alumno"><Trash2 size={16}/></button>
                                         </div>
                                     </td>
-
-                                    <td className="px-4 py-3 text-center">
-                                        <button
-                                            onClick={() => abrirModalEditar(a)}
-                                            className="p-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition cursor-pointer"
-                                            title="Editar"
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => eliminarAlumno(a.matricula || a.id)}
-                                            className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition cursor-pointer"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Tarjetas para móvil: mismas acciones y handlers que la tabla */}
+                <div className="divide-y divide-slate-100 md:hidden">
+                    {alumnosFiltrados.length === 0 ? (
+                        <p className="px-4 py-12 text-center text-sm text-slate-500">No se encontraron alumnos con esos criterios.</p>
+                    ) : alumnosFiltrados.map((a) => (
+                        <article key={a.matricula || a.id} className="space-y-3 p-4">
+                            <div className="flex items-start gap-3">
+                                <button type="button" onClick={() => consultarFoto(a)} title="Ver fotografía" className="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500">
+                                    {fotoUrls[a.matricula]?.url ? <img src={fotoUrls[a.matricula].url} alt={`Foto ${a.nombre}`} className="h-full w-full object-cover" /> : cargandoFoto[a.matricula] ? <span className="text-[10px]">...</span> : <UserRound size={21}/>}
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-semibold text-slate-900">{a.nombre} {a.apellidoPaterno || ""} {a.apellidoMaterno || ""}</p>
+                                    <p className="mt-0.5 font-mono text-xs text-slate-500">{a.matricula}</p>
+                                    <span className="mt-2 inline-flex rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-[#8b1e43]">Grupo {a.Grupo?.nombre || a.grupoId}</span>
+                                </div>
+                                <div className="flex gap-1.5">
+                                    <button type="button" onClick={() => abrirModalEditar(a)} className="rounded-lg bg-amber-50 p-2 text-amber-700" title="Editar"><Edit size={16}/></button>
+                                    <button type="button" onClick={() => eliminarAlumno(a.matricula || a.id)} className="rounded-lg bg-rose-50 p-2 text-rose-700" title="Eliminar"><Trash2 size={16}/></button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                                <p className="truncate">{a.correo || a.correoElectronico || "Sin correo registrado"}</p>
+                                <p>{a.telefono || "Sin teléfono registrado"}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button type="button" onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700"><QrCode size={14}/> QR</button>
+                                <button type="button" onClick={() => abrirCamara(a)} disabled={!!subiendoFoto[a.matricula]} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 disabled:opacity-50"><Camera size={14}/> Cámara</button>
+                                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+                                    <Upload size={13}/> Archivo
+                                    <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={!!subiendoFoto[a.matricula]} onChange={(e) => { subirFoto(a, e.target.files?.[0]); e.target.value = ""; }} />
+                                </label>
+                                <button type="button" onClick={() => enrolarRostro(a)} disabled={!a.fotoKey || !!enrolandoRostro[a.matricula] || !!subiendoFoto[a.matricula]} className="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800 disabled:opacity-40"><Fingerprint size={14}/>{enrolandoRostro[a.matricula] ? "Enrolando..." : "Enrolar rostro"}</button>
+                            </div>
+                            {subiendoFoto[a.matricula] && <p className="text-[11px] font-medium text-emerald-700">Guardando fotografía...</p>}
+                        </article>
+                    ))}
                 </div>
             </section>
 
