@@ -569,13 +569,131 @@ const confirmarImportacionMasiva = async () => {
     });
 
     return (
-        <div className="w-full max-w-none px-8 py-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <h1 className="text-3xl font-bold text-slate-800">
-                    Gestión de Alumnos
-                </h1>
+        <div className="mx-auto w-full max-w-[1600px] space-y-6 px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
+            {/* Encabezado ejecutivo: presentación visual, conserva las acciones existentes */}
+            <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-[#451326] p-5 text-white shadow-lg sm:p-7">
+                <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-rose-700/20 blur-3xl" />
+                <div className="relative flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
+                    <div className="max-w-2xl">
+                        <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-rose-200">
+                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                            CECyTE Hidalgo · Control escolar
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Directorio de alumnos</h1>
+                        <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">
+                            Administración del padrón estudiantil, expedientes digitales e identificación para el control de acceso y asistencia.
+                        </p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                            type="file"
+                            ref={inputFileRef}
+                            onChange={manejarSeleccionArchivo}
+                            accept=".csv, .xlsx, .xls"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => inputFileRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+                        >
+                            <Upload size={17} /> Importar Excel/CSV
+                        </button>
+                        <button
+                            onClick={abrirModalCrear}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-rose-600"
+                        >
+                            <Plus size={18} /> Agregar alumno
+                        </button>
+                    </div>
+                </div>
+            </section>
 
-                <div className="flex items-center gap-3">
+            {/* Indicadores descriptivos calculados con el padrón cargado */}
+            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-500">Matrícula registrada</p>
+                        <span className="rounded-xl bg-slate-100 p-2 text-slate-600"><UserRound size={17}/></span>
+                    </div>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900 tabular-nums">{alumnos.length.toLocaleString("es-MX")}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Alumnos en el padrón</p>
+                </article>
+                <article className="rounded-2xl border border-rose-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-500">Grupos disponibles</p>
+                        <span className="rounded-xl bg-rose-50 p-2 text-rose-700"><Filter size={17}/></span>
+                    </div>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-rose-800 tabular-nums">{grupos.length.toLocaleString("es-MX")}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Grupos en el catálogo</p>
+                </article>
+                <article className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-500">Con fotografía</p>
+                        <span className="rounded-xl bg-emerald-50 p-2 text-emerald-700"><Camera size={17}/></span>
+                    </div>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-emerald-700 tabular-nums">{alumnos.filter(a => !!a.fotoKey).length.toLocaleString("es-MX")}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Expedientes con foto registrada</p>
+                </article>
+                <article className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-500">Resultados actuales</p>
+                        <span className="rounded-xl bg-sky-50 p-2 text-sky-700"><Search size={17}/></span>
+                    </div>
+                    <p className="mt-3 text-3xl font-bold tracking-tight text-sky-700 tabular-nums">{alumnosFiltrados.length.toLocaleString("es-MX")}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Coincidencias con los filtros</p>
+                </article>
+            </section>
+
+            {/* Búsqueda y filtros */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="mb-4 flex flex-col justify-between gap-1 sm:flex-row sm:items-end">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[.17em] text-slate-400">Consulta del padrón</p>
+                        <h2 className="mt-1 text-base font-bold text-slate-900">Buscar y filtrar estudiantes</h2>
+                    </div>
+                    <p className="text-xs text-slate-400">Localiza expedientes por matrícula, nombre, correo o grupo</p>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 transition focus-within:border-rose-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-rose-500/10 sm:max-w-xl">
+                        <Search size={18} className="mr-2 shrink-0 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por matrícula, nombre o correo..."
+                            value={busqueda}
+                            onChange={(e) => setBusqueda(e.target.value)}
+                            className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                        />
+                    </div>
+                    <div className="flex w-full items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 sm:max-w-xs">
+                        <Filter size={17} className="mr-2 shrink-0 text-slate-400" />
+                        <select
+                            value={filtroGrupo}
+                            onChange={(e) => setFiltroGrupo(e.target.value)}
+                            className="w-full cursor-pointer bg-transparent text-sm text-slate-700 outline-none"
+                        >
+                            <option value="">Todos los grupos</option>
+                            {grupos.map((g) => (
+                                <option key={g.id} value={g.id}>
+                                    {g.nombre} ({g.id})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-col justify-between gap-2 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Base de datos escolar</p>
+                        <h2 className="mt-1 text-base font-bold text-slate-900">Alumnos registrados</h2>
+                    </div>
+                    <span className="w-fit rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">{alumnosFiltrados.length} de {alumnos.length} alumnos</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-[1050px] w-full">
+                    <thead className="bg-slate-50">
+                        <tr className="border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     <input
                         type="file"
                         ref={inputFileRef}
@@ -635,40 +753,40 @@ const confirmarImportacionMasiva = async () => {
                 <table className="min-w-[900px] w-full">
                     <thead className="bg-slate-200">
                         <tr>
-                            <th className="p-3 text-center">Foto</th>
-                            <th className="p-3 text-left">Matrícula</th>
-                            <th className="p-3 text-left">Nombre</th>
-                            <th className="p-3 text-left">Apellidos</th>
-                            <th className="p-3 text-left">Correo</th>
-                            <th className="p-3 text-left">Teléfono</th>
-                            <th className="p-3 text-left">Grupo</th>
-                            <th className="p-3 text-center">QR</th>
-                            <th className="p-3 text-center">Acciones</th>
+                            <th className="px-4 py-4 text-center">Foto</th>
+                            <th className="px-4 py-4 text-left">Matrícula</th>
+                            <th className="px-4 py-4 text-left">Nombre</th>
+                            <th className="px-4 py-4 text-left">Apellidos</th>
+                            <th className="px-4 py-4 text-left">Correo</th>
+                            <th className="px-4 py-4 text-left">Teléfono</th>
+                            <th className="px-4 py-4 text-left">Grupo</th>
+                            <th className="px-4 py-4 text-center">Identificación</th>
+                            <th className="px-4 py-4 text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {alumnosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan="9" className="p-4 text-center text-gray-500">
+                                <td colSpan="9" className="px-4 py-16 text-center text-sm text-slate-500">
                                     No se encontraron alumnos registrados con esos criterios.
                                 </td>
                             </tr>
                         ) : (
                             alumnosFiltrados.map((a) => (
-                                <tr key={a.matricula || a.id} className="border-b hover:bg-slate-50">
-                                    <td className="p-2 text-center">
+                                <tr key={a.matricula || a.id} className="transition-colors hover:bg-rose-50/30">
+                                    <td className="px-4 py-3 text-center">
                                         <button type="button" onClick={() => consultarFoto(a)} title="Ver fotografía" className="inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500 hover:ring-2 hover:ring-blue-300">
                                             {fotoUrls[a.matricula]?.url ? <img src={fotoUrls[a.matricula].url} alt={`Foto ${a.nombre}`} className="h-full w-full object-cover" /> : cargandoFoto[a.matricula] ? <span className="text-[10px]">...</span> : <UserRound size={20} />}
                                         </button>
                                     </td>
-                                    <td className="p-3 font-medium text-slate-700">{a.matricula}</td>
-                                    <td className="p-3 text-slate-600">{a.nombre}</td>
-                                    <td className="p-3 text-slate-600">{`${a.apellidoPaterno || ''} ${a.apellidoMaterno || ''}`}</td>
-                                    <td className="p-3 text-slate-600">{a.correo || a.correoElectronico}</td>
-                                    <td className="p-3 text-slate-600">{a.telefono}</td>
-                                    <td className="p-3 text-slate-600">{a.Grupo?.nombre || a.grupoId}</td>
+                                    <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-700">{a.matricula}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">{a.nombre}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">{`${a.apellidoPaterno || ''} ${a.apellidoMaterno || ''}`}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">{a.correo || a.correoElectronico}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">{a.telefono}</td>
+                                    <td className="px-4 py-3 text-sm text-slate-600">{a.Grupo?.nombre || a.grupoId}</td>
                                     
-                                    <td className="p-3 text-center">
+                                    <td className="px-4 py-3 text-center">
                                         <div className="flex flex-col items-center gap-1">
                                             <button onClick={() => abrirModalQR(a)} className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 text-xs font-medium" title="Ver Código QR"><QrCode size={14} /> QR</button>
                                             <div className="flex flex-wrap items-center justify-center gap-1">
@@ -720,7 +838,7 @@ const confirmarImportacionMasiva = async () => {
                                         </div>
                                     </td>
 
-                                    <td className="p-3 text-center flex justify-center gap-2">
+                                    <td className="px-4 py-3 text-center">
                                         <button
                                             onClick={() => abrirModalEditar(a)}
                                             className="p-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition cursor-pointer"
@@ -741,7 +859,8 @@ const confirmarImportacionMasiva = async () => {
                         )}
                     </tbody>
                 </table>
-            </div>
+                </div>
+            </section>
 
             {/* Modal para Crear y Editar */}
             {mostrarModal && (
