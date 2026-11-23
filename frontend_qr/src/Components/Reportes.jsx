@@ -52,6 +52,25 @@ const styles = `
  .reportes-pro .rp-kpi { min-height:100px; }
  .reportes-pro .rp-kpi-num { font-size:25px; }
 }
+@media print {
+ @page { size:A4 landscape; margin:12mm; }
+ body { background:#fff !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+ body * { visibility:hidden !important; }
+ .reportes-pro, .reportes-pro * { visibility:visible !important; }
+ .reportes-pro { position:absolute !important; left:0 !important; top:0 !important; width:100% !important; max-width:none !important; color:#172235 !important; }
+ .reportes-pro .rp-no-print { display:none !important; }
+ .reportes-pro .rp-card { box-shadow:none !important; break-inside:avoid; border-color:#dfe4eb !important; }
+ .reportes-pro .rp-table-wrap { overflow:visible !important; }
+ .reportes-pro table { width:100% !important; min-width:0 !important; font-size:9px !important; }
+ .reportes-pro th, .reportes-pro td { padding:7px 8px !important; font-size:9px !important; }
+ .reportes-pro th { position:static !important; }
+ .reportes-pro h1 { font-size:22px !important; }
+ .reportes-pro section { break-inside:auto; }
+ .reportes-pro tr { break-inside:avoid; }
+ .reportes-pro .rp-kpi { min-height:0 !important; padding:12px !important; }
+ .reportes-pro .rp-kpi-num { font-size:22px !important; }
+ .reportes-pro .rp-print-only { display:block !important; }
+}
 `;
 
 const unwrap = (response) => {
@@ -156,6 +175,9 @@ export default function Reportes() {
   const [busqueda, setBusqueda] = useState("");
   const [umbral, setUmbral] = useState(3);
 
+  // Abre el diálogo de impresión del navegador; el usuario puede guardar el reporte como PDF.
+  const exportarPDF = () => window.print();
+
   const cargarCatalogos = useCallback(async () => {
     setCargandoCatalogos(true);
     try {
@@ -222,6 +244,26 @@ export default function Reportes() {
     );
   }, [resumen.alumnosConFalta, busqueda]);
 
+  const resumenPorGrupo = useMemo(() => {
+    const mapa = new Map();
+    registros.forEach((registro) => {
+      const grupo = getGrupo(registro);
+      if (!mapa.has(grupo)) mapa.set(grupo, { grupo, registros: 0, faltas: 0, retardos: 0, alumnos: new Set() });
+      const item = mapa.get(grupo);
+      item.registros += 1;
+      const estado = String(registro.estado || "").toUpperCase();
+      if (estado === "FALTA") item.faltas += 1;
+      if (estado === "RETARDO") item.retardos += 1;
+      const alumno = getAlumno(registro);
+      const matricula = alumno.matricula || registro.matricula || alumno.id || registro.alumnoId;
+      if (matricula) item.alumnos.add(matricula);
+    });
+    return [...mapa.values()]
+      .map((item) => ({ ...item, alumnos: item.alumnos.size }))
+      .sort((a, b) => b.faltas - a.faltas || b.retardos - a.retardos)
+      .slice(0, 8);
+  }, [registros]);
+
   const porcentajeFaltas = registros.length ? (resumen.totalFaltas / registros.length) * 100 : 0;
 
   const aplicarRapido = (dias) => {
@@ -244,13 +286,14 @@ export default function Reportes() {
           <h1 className="text-3xl font-semibold tracking-[-.045em] text-slate-900">Seguimiento de asistencia</h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">Identifica patrones de inasistencia y prioriza la atención de alumnos que necesitan acompañamiento.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="rp-no-print flex flex-wrap gap-2">
           <button className="rp-btn" onClick={cargarCatalogos} disabled={cargandoCatalogos}>↻ Actualizar catálogos</button>
-          <button className="rp-btn" onClick={() => descargarCSV(listaSeguimiento)} disabled={!listaSeguimiento.length}>↓ Exportar seguimiento</button>
+          <button className="rp-btn" onClick={() => descargarCSV(listaSeguimiento)} disabled={!listaSeguimiento.length}>↓ Exportar CSV</button>
+          <button className="rp-btn rp-btn-primary" onClick={exportarPDF} disabled={!consultado || cargando}>⇩ Exportar PDF</button>
         </div>
       </header>
 
-      <section className="rp-card p-4 sm:p-5">
+      <section className="rp-card rp-no-print p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><p className="rp-eyebrow">Tipo de consulta</p><h2 className="mt-1 text-base font-semibold text-slate-900">Explora la asistencia</h2></div>
           <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
@@ -278,11 +321,51 @@ export default function Reportes() {
 
       {consultado && !cargando && (
         <>
-          <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <section className="rp-print-only mb-4 hidden border-b border-slate-200 pb-3">
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-500">CECyTE Hidalgo · Control escolar</p>
+            <h2 className="mt-1 text-xl font-bold text-slate-900">Informe ejecutivo de seguimiento de asistencia</h2>
+            <p className="mt-1 text-xs text-slate-600">
+              Tipo: {TIPOS.find((t) => t.id === tipo)?.titulo || "General"} ·
+              Grupo: {grupos.find((g) => g.id === filtros.grupoId)?.nombre || "Todos"} ·
+              Estado: {ESTADOS.find((e) => e.value === filtros.estado)?.label || "Todos"} ·
+              Periodo: {filtros.fechaInicio || "Sin inicio"} a {filtros.fechaFin || "Sin fin"}
+            </p>
+            <p className="mt-1 text-[10px] text-slate-500">Generado: {new Date().toLocaleString("es-MX")}</p>
+          </section>
+          <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">
             <article className="rp-card rp-kpi"><p className="rp-eyebrow">Registros consultados</p><div className="rp-kpi-num">{registros.length.toLocaleString("es-MX")}</div><p className="mt-2 text-xs text-slate-400">Registros de acceso al plantel</p></article>
             <article className="rp-card rp-kpi"><p className="rp-eyebrow">Faltas registradas</p><div className="rp-kpi-num text-rose-700">{resumen.totalFaltas.toLocaleString("es-MX")}</div><p className="mt-2 text-xs text-slate-400">{porcentajeFaltas.toFixed(1)}% de los registros consultados</p></article>
             <article className="rp-card rp-kpi"><p className="rp-eyebrow">Alumnos con faltas</p><div className="rp-kpi-num">{resumen.alumnosConFalta.length.toLocaleString("es-MX")}</div><p className="mt-2 text-xs text-slate-400">Al menos una falta en el periodo</p></article>
+            <article className="rp-card rp-kpi"><p className="rp-eyebrow">Retardos registrados</p><div className="rp-kpi-num text-amber-700">{resumen.totalRetardos.toLocaleString("es-MX")}</div><p className="mt-2 text-xs text-slate-400">Registros con estado RETARDO</p></article>
             <article className="rp-card rp-kpi"><p className="rp-eyebrow">Requieren atención</p><div className="rp-kpi-num text-amber-700">{resumen.alumnosEnRiesgo.length.toLocaleString("es-MX")}</div><p className="mt-2 text-xs text-slate-400">Con {umbral} o más faltas registradas</p></article>
+          </section>
+
+          <section className="rp-card p-5">
+            <div className="mb-4">
+              <p className="rp-eyebrow">Panorama por grupo</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">Distribución de incidencias</h2>
+              <p className="mt-1 text-xs text-slate-400">Grupos ordenados por número de faltas en el periodo consultado.</p>
+            </div>
+            {resumenPorGrupo.length ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {resumenPorGrupo.map((g) => {
+                  const maxFaltas = Math.max(1, ...resumenPorGrupo.map((x) => x.faltas));
+                  const ancho = (g.faltas / maxFaltas) * 100;
+                  return (
+                    <div key={g.grupo} className="rounded-xl bg-slate-50 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate text-sm font-semibold text-slate-800">{g.grupo}</span>
+                        <span className="shrink-0 text-xs font-bold text-rose-700">{g.faltas} faltas</span>
+                      </div>
+                      <div className="rp-bar mt-2"><span style={{ width: `${ancho}%` }} /></div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                        <span>{g.alumnos} alumnos identificados</span><span>{g.retardos} retardos</span><span>{g.registros} registros</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : <div className="rp-empty">No hay información de grupos en los registros consultados.</div>}
           </section>
 
           <section className="rp-card overflow-hidden">
@@ -290,7 +373,7 @@ export default function Reportes() {
               <div><p className="rp-eyebrow">Intervención escolar</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Alumnos que requieren seguimiento</h2><p className="mt-1 text-xs text-slate-400">Ordenados de mayor a menor número de faltas.</p></div>
               <div className="flex flex-wrap items-center gap-2"><label className="text-xs text-slate-500" htmlFor="rp-umbral">Umbral de atención</label><select id="rp-umbral" className="rp-input !w-auto" value={umbral} onChange={(e) => setUmbral(Number(e.target.value))}><option value="1">1 o más</option><option value="2">2 o más</option><option value="3">3 o más</option><option value="5">5 o más</option><option value="6">6 o más</option></select></div>
             </div>
-            <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="rp-no-print flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
               <input className="rp-input sm:max-w-sm" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar alumno, matrícula, grupo o tutor…" />
               <span className="text-xs text-slate-400">{listaSeguimiento.length} alumnos en seguimiento</span>
             </div>
@@ -326,11 +409,14 @@ export default function Reportes() {
               return <tr key={r.id || `${a.matricula || i}-${i}`}><td>{getFecha(r) ? new Date(getFecha(r)).toLocaleString("es-MX") : "—"}</td><td className="font-medium text-slate-800">{getNombre(a)}</td><td>{a.matricula || r.matricula || "—"}</td><td>{getGrupo(r)}</td><td><span className={`rp-pill ${color}`}>{estado}</span></td></tr>;
             })}</tbody></table></div> : <div className="rp-empty">No hay registros para los filtros seleccionados.</div>}
           </section>
+          <p className="rp-print-only hidden mt-3 text-[9px] text-slate-500">
+            Reporte generado a partir de los registros devueltos por el sistema y los filtros seleccionados. Los niveles de prioridad son criterios operativos de seguimiento, no sanciones automáticas.
+          </p>
         </>
       )}
 
       {!consultado && !cargando && (
-        <section className="rp-card grid gap-4 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
+        <section className="rp-card rp-no-print grid gap-4 p-6 sm:grid-cols-[1fr_auto] sm:items-center">
           <div><p className="rp-eyebrow">Centro de seguimiento</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Detecta a tiempo las inasistencias</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Selecciona un periodo y consulta. El sistema agrupará los registros por alumno, contará faltas y días distintos con falta, y ordenará los casos para facilitar la intervención de dirección y tutoría.</p></div>
           <div className="rounded-xl bg-[#f6eef1] px-5 py-4 text-sm text-[#64132f]"><div className="font-semibold">Flujo recomendado</div><div className="mt-1 text-xs leading-5 text-[#865c6c]">Consultar → identificar → contactar tutor → documentar seguimiento</div></div>
         </section>
