@@ -15,6 +15,8 @@ export class FacialApiError extends Error {
     this.name = "FacialApiError";
     this.status = status;
     this.payload = payload;
+
+    Object.setPrototypeOf(this, FacialApiError.prototype);
   }
 }
 
@@ -27,13 +29,17 @@ export async function registerFacialAttendance(
 
   // 1. Validar imagen
   if (!imageBase64?.trim()) {
-    console.error("[FACIAL] ERROR: La imagen está vacía");
-    throw new Error("La cámara no generó una imagen válida.");
+    console.log("[FACIAL] Imagen vacía o no válida");
+
+    throw new FacialApiError(
+      "La cámara no generó una imagen válida.",
+      0
+    );
   }
 
   // 2. Limpiar encabezado Base64 si existe
   const cleanBase64 = imageBase64.replace(
-    /^data:image\/[a-zA-Z]+;base64,/,
+    /^data:image\/[a-zA-Z]+;base64,/i,
     ""
   );
 
@@ -59,15 +65,21 @@ export async function registerFacialAttendance(
       }),
       signal,
     });
-  } catch (error) {
-    console.error("[FACIAL] ERROR DE CONEXIÓN:", error);
 
+  } catch (error) {
+
+    // Cancelación de la solicitud
     if (error instanceof Error && error.name === "AbortError") {
+      console.log("[FACIAL] Solicitud cancelada");
+
       throw error;
     }
 
+    // Error de conexión controlado
+    console.log("[FACIAL] No fue posible conectar con el servidor");
+
     throw new FacialApiError(
-      "No fue posible conectar con el servidor. Verifica tu conexión y el backend.",
+      "No fue posible conectar con el servidor. Verifica tu conexión e inténtalo nuevamente.",
       0
     );
   }
@@ -77,7 +89,19 @@ export async function registerFacialAttendance(
   console.log("[FACIAL] HTTP OK:", response.ok);
 
   // 5. Leer respuesta como texto
-  const responseText = await response.text();
+  let responseText: string;
+
+  try {
+    responseText = await response.text();
+
+  } catch {
+    console.log("[FACIAL] No fue posible leer la respuesta del servidor");
+
+    throw new FacialApiError(
+      "No fue posible interpretar la respuesta del servidor.",
+      response.status
+    );
+  }
 
   console.log("[FACIAL] Respuesta del servidor:", responseText);
 
@@ -86,8 +110,9 @@ export async function registerFacialAttendance(
 
   try {
     payload = JSON.parse(responseText) as FacialAttendanceResponse;
-  } catch (error) {
-    console.error("[FACIAL] ERROR: Respuesta no válida en JSON", error);
+
+  } catch {
+    console.log("[FACIAL] Respuesta JSON no válida");
 
     throw new FacialApiError(
       `El servidor devolvió una respuesta no válida (HTTP ${response.status}).`,
@@ -100,8 +125,26 @@ export async function registerFacialAttendance(
   console.log("[FACIAL] Mensaje del backend:", payload?.message);
 
   if (!response.ok || payload?.success !== true) {
-    console.error("[FACIAL] ERROR EN EL RECONOCIMIENTO O REGISTRO");
-    console.error("[FACIAL] Detalle:", payload);
+
+    // Identificar asistencia duplicada
+    if (
+      response.status === 409 ||
+      payload?.message?.toLowerCase().includes("ya fue registrada")
+    ) {
+      console.log("[FACIAL] ASISTENCIA YA REGISTRADA");
+
+      throw new FacialApiError(
+        "¡Ya registraste tu asistencia! Tu registro de hoy se encuentra confirmado.",
+        409,
+        payload
+      );
+    }
+
+    // Error controlado de reconocimiento o registro
+    console.log("[FACIAL] Registro no completado:", {
+      status: response.status,
+      message: payload?.message,
+    });
 
     throw new FacialApiError(
       payload?.message ||

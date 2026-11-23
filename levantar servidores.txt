@@ -1,0 +1,16 @@
+en la carpeta de facial-service
+
+.\.venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+en otra terminarl 
+
+cloudflared tunnel --url http://localhost:8000
+
+configuerear en render FACIAL SERVIE URL
+
+
+
+cd C:\Users\aldoh\Desktop\UTVM\Repositorios\pase_lista_complete\mobile-app
+
+npx expo start --dev-client --tunnel
